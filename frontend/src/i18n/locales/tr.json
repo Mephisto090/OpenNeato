@@ -432,5 +432,6 @@
   "Move rooms": "Odaları taşı",
   "Drag a room to move it.": "Taşımak için bir odayı sürükleyin.",
   "A room with this name already exists.": "Bu ada sahip bir oda zaten var.",
+  "A room needs at least three distinct corners and must enclose an area.": "Bir oda en az üç farklı köşeye sahip olmalı ve bir alanı çevrelemelidir.",
   "Delete room {name}": "{name} odasını sil"
 }

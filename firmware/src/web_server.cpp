@@ -8,6 +8,7 @@
 #include "manual_clean_manager.h"
 #include "notification_manager.h"
 #include "cleaning_history.h"
+#include "map_config_parser.h"
 #include "wifi_manager.h"
 #include "scheduler.h"
 #include <SPIFFS.h>
@@ -53,8 +54,7 @@ void WebServer::loggedBodyRoute(const char *path, WebRequestMethodComposite http
                     status = body && body->expectedLength > MAX_BUFFERED_BODY_BYTES ? 413 : 400;
                     sendError(request, status, status == 413 ? "request body too large" : "incomplete request body");
                 } else {
-                    uint8_t *data = reinterpret_cast<uint8_t *>(const_cast<char *>(body->value.c_str()));
-                    status = handler(request, data, body->value.length());
+                    status = handler(request, body->value);
                 }
                 delete body;
                 logger.logRequest(request->method(), request->url().c_str(), status, millis() - startMs);
@@ -311,25 +311,23 @@ void WebServer::registerSettingsRoutes() {
     registerGetRoute("/api/settings", settingsMgr, &SettingsManager::get);
 
     // PUT /api/settings — partial update (only fields present are written)
-    loggedBodyRoute("/api/settings", HTTP_PUT,
-                    [this](AsyncWebServerRequest *request, uint8_t *data, size_t len) -> int {
-                        String body = String(reinterpret_cast<const char *>(data), len);
-                        ApplyResult result = settingsMgr.apply(body);
-                        if (result == APPLY_INVALID) {
-                            sendError(request, 400, "Invalid settings");
-                            return 400;
-                        }
-                        if (result == APPLY_CHANGED) {
-                            // Push manual clean settings to manager (no reboot needed)
-                            const auto& s = settingsMgr.get();
-                            manualMgr.setStallThreshold(s.stallThreshold);
-                            manualMgr.setBrushRpm(s.brushRpm);
-                            manualMgr.setVacuumSpeed(s.vacuumSpeed);
-                            manualMgr.setSideBrushPower(s.sideBrushPower);
-                        }
-                        request->send(200, "application/json", settingsMgr.get().toJson());
-                        return 200;
-                    });
+    loggedBodyRoute("/api/settings", HTTP_PUT, [this](AsyncWebServerRequest *request, const String& body) -> int {
+        ApplyResult result = settingsMgr.apply(body);
+        if (result == APPLY_INVALID) {
+            sendError(request, 400, "Invalid settings");
+            return 400;
+        }
+        if (result == APPLY_CHANGED) {
+            // Push manual clean settings to manager (no reboot needed)
+            const auto& s = settingsMgr.get();
+            manualMgr.setStallThreshold(s.stallThreshold);
+            manualMgr.setBrushRpm(s.brushRpm);
+            manualMgr.setVacuumSpeed(s.vacuumSpeed);
+            manualMgr.setSideBrushPower(s.sideBrushPower);
+        }
+        request->send(200, "application/json", settingsMgr.get().toJson());
+        return 200;
+    });
 
     // POST /api/notifications/test?topic=<topic> — send a test notification
     loggedRoute("/api/notifications/test", HTTP_POST, [this](AsyncWebServerRequest *request) -> int {
@@ -431,14 +429,13 @@ void WebServer::registerMapRoutes() {
 
     // PUT /api/history/{filename}/map-config or /pin. The router matches
     // prefix paths, so the filename and resource are decoded from the URL.
-    loggedBodyRoute("/api/history", HTTP_PUT, [this](AsyncWebServerRequest *request, uint8_t *data, size_t len) -> int {
+    loggedBodyRoute("/api/history", HTTP_PUT, [this](AsyncWebServerRequest *request, const String& body) -> int {
         String suffix = request->url().substring(String("/api/history/").length());
         const String configTail = "/map-config";
         const String pinTail = "/pin";
 
         if (suffix.endsWith(configTail)) {
             String filename = suffix.substring(0, suffix.length() - configTail.length());
-            String body(reinterpret_cast<const char *>(data), len);
             String error;
             if (!historyMgr.writeMapConfig(filename, body, error)) {
                 int status = error == "session not found" ? 404 : 400;
@@ -451,13 +448,12 @@ void WebServer::registerMapRoutes() {
 
         if (suffix.endsWith(pinTail)) {
             String filename = suffix.substring(0, suffix.length() - pinTail.length());
-            auto fields = fieldsFromJson(String(reinterpret_cast<const char *>(data), len));
-            const Field *pinned = findField(fields, "pinned");
-            if (!pinned || pinned->type != FIELD_BOOL) {
+            bool pinned;
+            if (!parsePinnedConfig(body, pinned)) {
                 sendError(request, 400, "pinned boolean is required");
                 return 400;
             }
-            if (!historyMgr.setPinned(filename, pinned->value == "true")) {
+            if (!historyMgr.setPinned(filename, pinned)) {
                 sendError(request, 404, "session not found");
                 return 404;
             }

@@ -872,6 +872,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 pinned:
                   type: boolean
@@ -1740,24 +1741,37 @@ components:
         - license
     MapPoint:
       type: object
+      additionalProperties: false
       properties:
         x:
           type: number
+          format: double
+          description: Finite world-coordinate value
         y:
           type: number
+          format: double
+          description: Finite world-coordinate value
       required:
         - x
         - y
     MapZone:
       type: object
+      additionalProperties: false
       properties:
         id:
           type: string
+          minLength: 1
+          x-maxUtf8Bytes: 48
+          description: Non-empty identifier, limited to 48 UTF-8 bytes and unique across all zones and no-go lines
         name:
           type: string
+          x-maxUtf8Bytes: 64
+          description: Display name limited to 64 UTF-8 bytes
         points:
           type: array
           minItems: 3
+          maxItems: 64
+          description: Polygon with at least three points distinct by more than 1e-6 and a finite shoelace area greater than 1e-6
           items:
             $ref: "#/components/schemas/MapPoint"
       required:
@@ -1766,19 +1780,26 @@ components:
         - points
     NoGoLine:
       type: object
+      additionalProperties: false
       properties:
         id:
           type: string
+          minLength: 1
+          x-maxUtf8Bytes: 48
+          description: Non-empty identifier, limited to 48 UTF-8 bytes and unique across all zones and no-go lines
         start:
           $ref: "#/components/schemas/MapPoint"
         end:
           $ref: "#/components/schemas/MapPoint"
+      description: Start and end coordinates must differ
       required:
         - id
         - start
         - end
     MapConfig:
       type: object
+      additionalProperties: false
+      description: JSON payload is limited to 12288 UTF-8 bytes; element IDs must be globally unique across zones and no-go lines
       properties:
         version:
           type: integer
@@ -1786,12 +1807,16 @@ components:
             - 1
         name:
           type: string
+          x-maxUtf8Bytes: 96
+          description: Map display name limited to 96 UTF-8 bytes
         zones:
           type: array
+          maxItems: 16
           items:
             $ref: "#/components/schemas/MapZone"
         noGoLines:
           type: array
+          maxItems: 32
           items:
             $ref: "#/components/schemas/NoGoLine"
       required:

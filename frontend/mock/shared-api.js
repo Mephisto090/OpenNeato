@@ -94,6 +94,54 @@ const byteLength = (value) => textEncoder.encode(value).length;
 const vBattFromFuel = (fuel) => Number((12.0 + (fuel / 100) * 4.6).toFixed(2));
 const isSafeFilename = (name) => /^[A-Za-z0-9._-]+$/.test(name) && !name.includes("..");
 
+const hasExactKeys = (value, keys) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    const expected = [...keys].sort();
+    const actual = Object.keys(value).sort();
+    return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
+};
+const isMapPoint = (point) => hasExactKeys(point, ["x", "y"]) && Number.isFinite(point.x) && Number.isFinite(point.y);
+const utf8LengthAtMost = (value, maximum) => typeof value === "string" && byteLength(value) <= maximum;
+const pointsDiffer = (left, right) => Math.abs(left.x - right.x) > 1e-6 || Math.abs(left.y - right.y) > 1e-6;
+const zoneHasArea = (points) => {
+    const unique = [];
+    for (const point of points) {
+        if (!unique.some((candidate) => !pointsDiffer(candidate, point))) unique.push(point);
+    }
+    if (unique.length < 3) return false;
+    let doubleArea = 0;
+    for (let index = 0; index < points.length; index++) {
+        const current = points[index];
+        const next = points[(index + 1) % points.length];
+        doubleArea += current.x * next.y - next.x * current.y;
+    }
+    const area = Math.abs(doubleArea) / 2;
+    return Number.isFinite(area) && area > 1e-6;
+};
+const isMapConfig = (config) => {
+    if (!hasExactKeys(config, ["version", "name", "zones", "noGoLines"])) return false;
+    if (config.version !== 1 || !utf8LengthAtMost(config.name, 96)) return false;
+    if (!Array.isArray(config.zones) || config.zones.length > 16) return false;
+    if (!Array.isArray(config.noGoLines) || config.noGoLines.length > 32) return false;
+    const ids = new Set();
+    for (const zone of config.zones) {
+        if (!hasExactKeys(zone, ["id", "name", "points"])) return false;
+        if (!utf8LengthAtMost(zone.id, 48) || zone.id.length === 0 || ids.has(zone.id)) return false;
+        if (!utf8LengthAtMost(zone.name, 64)) return false;
+        if (!Array.isArray(zone.points) || zone.points.length < 3 || zone.points.length > 64) return false;
+        if (!zone.points.every(isMapPoint) || !zoneHasArea(zone.points)) return false;
+        ids.add(zone.id);
+    }
+    for (const line of config.noGoLines) {
+        if (!hasExactKeys(line, ["id", "start", "end"])) return false;
+        if (!utf8LengthAtMost(line.id, 48) || line.id.length === 0 || ids.has(line.id)) return false;
+        if (!isMapPoint(line.start) || !isMapPoint(line.end)) return false;
+        if (line.start.x === line.end.x && line.start.y === line.end.y) return false;
+        ids.add(line.id);
+    }
+    return true;
+};
+
 const mockLogs = [
     { name: "current.jsonl", size: 8192, compressed: false },
     { name: "1700000000.jsonl.hs", size: 4096, compressed: true },
@@ -848,10 +896,15 @@ function createMockApi(context) {
                 );
             }
             if (method === "PUT") {
-                const config = await request.json();
-                if (config?.version !== 1 || !Array.isArray(config.zones) || !Array.isArray(config.noGoLines)) {
+                const body = await request.bytes();
+                if (body.length === 0 || body.length > 12288) return errorResponse("invalid map configuration", 400);
+                let config;
+                try {
+                    config = JSON.parse(new TextDecoder().decode(body));
+                } catch {
                     return errorResponse("invalid map configuration", 400);
                 }
+                if (!isMapConfig(config)) return errorResponse("invalid map configuration", 400);
                 context.mapConfigs.set(filename, config);
                 context.pinnedMaps ??= new Set();
                 context.pinnedMaps.add(filename);
@@ -866,8 +919,10 @@ function createMockApi(context) {
             if (!context.historySessions.has(filename)) return errorResponse("session not found", 404);
             context.mapConfigs ??= new Map();
             context.pinnedMaps ??= new Set();
-            const body = await request.json();
-            if (body.pinned) {
+            const body = await request.text();
+            const match = body.match(/^\s*\{\s*"pinned"\s*:\s*(true|false)\s*\}\s*$/);
+            if (!match) return errorResponse("pinned boolean is required", 400);
+            if (match[1] === "true") {
                 context.pinnedMaps.add(filename);
             } else {
                 context.pinnedMaps.delete(filename);

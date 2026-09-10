@@ -3,5 +3,6 @@
 
 #include <Arduino.h>
 bool parseMapConfig(const String& json, String& error);
+bool parsePinnedConfig(const String& json, bool& pinned);
 
 #endif

@@ -432,5 +432,6 @@
   "Move rooms": "Räume verschieben",
   "Drag a room to move it.": "Einen Raum ziehen, um ihn zu verschieben.",
   "A room with this name already exists.": "Ein Raum mit diesem Namen ist bereits vorhanden.",
+  "A room needs at least three distinct corners and must enclose an area.": "Ein Raum benötigt mindestens drei unterschiedliche Ecken und muss eine Fläche umschließen.",
   "Delete room {name}": "Raum {name} löschen"
 }

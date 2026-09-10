@@ -432,5 +432,6 @@
   "Move rooms": "Déplacer les pièces",
   "Drag a room to move it.": "Faites glisser une pièce pour la déplacer.",
   "A room with this name already exists.": "Une pièce portant ce nom existe déjà.",
+  "A room needs at least three distinct corners and must enclose an area.": "Une pièce nécessite au moins trois coins distincts et doit délimiter une surface.",
   "Delete room {name}": "Supprimer la pièce {name}"
 }

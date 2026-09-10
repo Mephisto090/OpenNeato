@@ -62,7 +62,7 @@ private:
     void loggedRoute(const char *path, WebRequestMethodComposite httpMethod, SyncHandler handler);
 
     // Overload for routes with a body callback (e.g. PUT with JSON body)
-    using BodyHandler = std::function<int(AsyncWebServerRequest *, uint8_t *data, size_t len)>;
+    using BodyHandler = std::function<int(AsyncWebServerRequest *, const String& body)>;
     void loggedBodyRoute(const char *path, WebRequestMethodComposite httpMethod, BodyHandler handler);
 
     // Register a GET endpoint. The method pointer type fully determines the arg

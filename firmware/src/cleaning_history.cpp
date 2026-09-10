@@ -1070,6 +1070,7 @@ bool CleaningHistory::deleteSession(const String& filename) {
     SPIFFS.remove(sidecarPath(filename, ".map.json"));
     SPIFFS.remove(sidecarPath(filename, ".map.json.tmp"));
     SPIFFS.remove(sidecarPath(filename, ".map.json.bak"));
+    SPIFFS.remove(sidecarPath(filename, ".map.json.old"));
     return removed;
 }
 

@@ -32,6 +32,26 @@ function newId(prefix: string): string {
     return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+function pointsDiffer(left: MapPoint, right: MapPoint): boolean {
+    return Math.abs(left.x - right.x) > 1e-6 || Math.abs(left.y - right.y) > 1e-6;
+}
+
+function isUsableZone(points: MapPoint[]): boolean {
+    const unique: MapPoint[] = [];
+    for (const point of points) {
+        if (!unique.some((candidate) => !pointsDiffer(candidate, point))) unique.push(point);
+    }
+    if (unique.length < 3) return false;
+    let doubleArea = 0;
+    for (let index = 0; index < points.length; index++) {
+        const current = points[index];
+        const next = points[(index + 1) % points.length];
+        doubleArea += current.x * next.y - next.x * current.y;
+    }
+    const area = Math.abs(doubleArea) / 2;
+    return Number.isFinite(area) && area > 1e-6;
+}
+
 export function MapEditor({ canvas, file, map, transform, rotation }: MapEditorProps) {
     const { t } = useI18n();
     const [config, setConfig] = useState<MapConfig>(EMPTY_CONFIG);
@@ -176,6 +196,10 @@ export function MapEditor({ canvas, file, map, transform, rotation }: MapEditorP
 
     const finishZone = useCallback(() => {
         if (saving || draft.length < 3) return;
+        if (!isUsableZone(draft)) {
+            setError(t("A room needs at least three distinct corners and must enclose an area."));
+            return;
+        }
         const name = window.prompt(t("Room name"));
         const trimmed = name?.trim();
         if (!trimmed) return;

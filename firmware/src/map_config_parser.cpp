@@ -312,9 +312,14 @@ namespace {
                         return fail("zone points must be an array");
                     ws();
                     size_t count = 0;
+                    double pointX[MAX_POINTS];
+                    double pointY[MAX_POINTS];
                     while (!at(']')) {
-                        if (count++ >= MAX_POINTS || !point())
-                            return count > MAX_POINTS ? fail("zone has too many points") : false;
+                        if (count >= MAX_POINTS)
+                            return fail("zone has too many points");
+                        if (!point(&pointX[count], &pointY[count]))
+                            return false;
+                        count++;
                         ws();
                         if (at(']'))
                             break;
@@ -323,6 +328,27 @@ namespace {
                     }
                     if (!take(']') || count < 3)
                         return fail("zone requires between three and 64 points");
+                    size_t distinct = 0;
+                    for (size_t i = 0; i < count; i++) {
+                        bool duplicate = false;
+                        for (size_t j = 0; j < i; j++) {
+                            if (fabs(pointX[i] - pointX[j]) <= 1e-6 && fabs(pointY[i] - pointY[j]) <= 1e-6) {
+                                duplicate = true;
+                                break;
+                            }
+                        }
+                        if (!duplicate)
+                            distinct++;
+                    }
+                    if (distinct < 3)
+                        return fail("zone requires at least three distinct points");
+                    double twiceArea = 0;
+                    for (size_t i = 0; i < count; i++) {
+                        size_t next = (i + 1) % count;
+                        twiceArea += pointX[i] * pointY[next] - pointX[next] * pointY[i];
+                    }
+                    if (!isfinite(twiceArea) || fabs(twiceArea) <= 2e-6)
+                        return fail("zone polygon area is too small");
                 } else {
                     return fail("unknown or duplicate zone field");
                 }
@@ -419,4 +445,46 @@ bool parseMapConfig(const String& json, String& error) {
     error = "";
     Parser parser(json, error);
     return parser.parse();
+}
+
+bool parsePinnedConfig(const String& json, bool& pinned) {
+    size_t position = 0;
+    auto skipWhitespace = [&json, &position]() {
+        while (position < json.length() &&
+               (json[position] == ' ' || json[position] == '\t' || json[position] == '\r' || json[position] == '\n'))
+            position++;
+    };
+    auto consume = [&json, &position](const char *token) {
+        size_t tokenLength = strlen(token);
+        if (position + tokenLength > json.length())
+            return false;
+        for (size_t i = 0; i < tokenLength; i++)
+            if (json[position + i] != token[i])
+                return false;
+        position += tokenLength;
+        return true;
+    };
+
+    skipWhitespace();
+    if (!consume("{"))
+        return false;
+    skipWhitespace();
+    if (!consume("\"pinned\""))
+        return false;
+    skipWhitespace();
+    if (!consume(":"))
+        return false;
+    skipWhitespace();
+    if (consume("true")) {
+        pinned = true;
+    } else if (consume("false")) {
+        pinned = false;
+    } else {
+        return false;
+    }
+    skipWhitespace();
+    if (!consume("}"))
+        return false;
+    skipWhitespace();
+    return position == json.length();
 }
