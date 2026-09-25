@@ -593,7 +593,20 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                 </svg>
             )}
             {editing && (
-                <div class="map-editor-items">
+                <div
+                    class="map-editor-items"
+                    onWheel={(event) => {
+                        const items = event.currentTarget;
+                        if (
+                            items.scrollWidth <= items.clientWidth ||
+                            Math.abs(event.deltaX) >= Math.abs(event.deltaY)
+                        ) {
+                            return;
+                        }
+                        items.scrollLeft += event.deltaY;
+                        event.preventDefault();
+                    }}
+                >
                     {config.zones.map((zone, index) => (
                         <span class="map-editor-chip zone" style={{ borderColor: roomColor(zone.color, index) }}>
                             <button
