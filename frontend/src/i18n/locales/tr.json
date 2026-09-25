@@ -433,5 +433,20 @@
   "Drag a room to move it.": "Taşımak için bir odayı sürükleyin.",
   "A room with this name already exists.": "Bu ada sahip bir oda zaten var.",
   "A room needs at least three distinct corners and must enclose an area.": "Bir oda en az üç farklı köşeye sahip olmalı ve bir alanı çevrelemelidir.",
-  "Delete room {name}": "{name} odasını sil"
+  "Delete room {name}": "{name} odasını sil",
+  "No-go line name": "Girilmez çizgi adı",
+  "A no-go line with this name already exists.": "Bu ada sahip bir girilmez çizgi zaten var.",
+  "Delete no-go line {name}": "{name} girilmez çizgisini sil",
+  "My reference map": "Referans haritam",
+  "Reference map name": "Referans harita adı",
+  "Remove reference map": "Referans haritayı kaldır",
+  "Save as reference map": "Referans harita olarak kaydet",
+  "Edit reference map": "Referans haritayı düzenle",
+  "Tap at least three corners, then tap the first point again or finish the room.": "En az üç köşeye dokunun, ardından ilk noktaya tekrar dokunun veya odayı tamamlayın.",
+  "Reference Map": "Referans Harita",
+  "Reference Maps": "Referans Haritalar",
+  "reference map": "referans harita",
+  "reference maps": "referans haritalar",
+  "No reference map yet": "Henüz referans harita yok",
+  "Complete a full cleaning run, open it in Cleaning History, and save it as a reference map.": "Tam bir temizlik çalıştırın, Temizlik Geçmişinde açın ve referans harita olarak kaydedin."
 }

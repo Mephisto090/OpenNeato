@@ -133,8 +133,10 @@ const isMapConfig = (config) => {
         ids.add(zone.id);
     }
     for (const line of config.noGoLines) {
-        if (!hasExactKeys(line, ["id", "start", "end"])) return false;
+        const keys = Object.hasOwn(line, "name") ? ["id", "name", "start", "end"] : ["id", "start", "end"];
+        if (!hasExactKeys(line, keys)) return false;
         if (!utf8LengthAtMost(line.id, 48) || line.id.length === 0 || ids.has(line.id)) return false;
+        if (line.name !== undefined && (!utf8LengthAtMost(line.name, 64) || line.name.length === 0)) return false;
         if (!isMapPoint(line.start) || !isMapPoint(line.end)) return false;
         if (line.start.x === line.end.x && line.start.y === line.end.y) return false;
         ids.add(line.id);

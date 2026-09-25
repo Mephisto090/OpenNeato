@@ -433,5 +433,20 @@
   "Drag a room to move it.": "Faites glisser une pièce pour la déplacer.",
   "A room with this name already exists.": "Une pièce portant ce nom existe déjà.",
   "A room needs at least three distinct corners and must enclose an area.": "Une pièce nécessite au moins trois coins distincts et doit délimiter une surface.",
-  "Delete room {name}": "Supprimer la pièce {name}"
+  "Delete room {name}": "Supprimer la pièce {name}",
+  "No-go line name": "Nom de la ligne interdite",
+  "A no-go line with this name already exists.": "Une ligne interdite portant ce nom existe déjà.",
+  "Delete no-go line {name}": "Supprimer la ligne interdite {name}",
+  "My reference map": "Ma carte de référence",
+  "Reference map name": "Nom de la carte de référence",
+  "Remove reference map": "Supprimer la carte de référence",
+  "Save as reference map": "Enregistrer comme carte de référence",
+  "Edit reference map": "Modifier la carte de référence",
+  "Tap at least three corners, then tap the first point again or finish the room.": "Touchez au moins trois angles, puis touchez à nouveau le premier point ou terminez la pièce.",
+  "Reference Map": "Carte de référence",
+  "Reference Maps": "Cartes de référence",
+  "reference map": "carte de référence",
+  "reference maps": "cartes de référence",
+  "No reference map yet": "Aucune carte de référence",
+  "Complete a full cleaning run, open it in Cleaning History, and save it as a reference map.": "Effectuez un nettoyage complet, ouvrez-le dans l’historique et enregistrez-le comme carte de référence."
 }

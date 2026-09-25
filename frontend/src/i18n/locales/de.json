@@ -433,5 +433,20 @@
   "Drag a room to move it.": "Einen Raum ziehen, um ihn zu verschieben.",
   "A room with this name already exists.": "Ein Raum mit diesem Namen ist bereits vorhanden.",
   "A room needs at least three distinct corners and must enclose an area.": "Ein Raum benötigt mindestens drei unterschiedliche Ecken und muss eine Fläche umschließen.",
-  "Delete room {name}": "Raum {name} löschen"
+  "Delete room {name}": "Raum {name} löschen",
+  "No-go line name": "Name der No-Go-Linie",
+  "A no-go line with this name already exists.": "Eine No-Go-Linie mit diesem Namen existiert bereits.",
+  "Delete no-go line {name}": "No-Go-Linie {name} löschen",
+  "My reference map": "Meine Referenzkarte",
+  "Reference map name": "Name der Referenzkarte",
+  "Remove reference map": "Referenzkarte entfernen",
+  "Save as reference map": "Als Referenzkarte speichern",
+  "Edit reference map": "Referenzkarte bearbeiten",
+  "Tap at least three corners, then tap the first point again or finish the room.": "Mindestens drei Ecken antippen. Danach erneut den ersten Punkt antippen oder den Raum abschließen.",
+  "Reference Map": "Referenzkarte",
+  "Reference Maps": "Referenzkarten",
+  "reference map": "Referenzkarte",
+  "reference maps": "Referenzkarten",
+  "No reference map yet": "Noch keine Referenzkarte",
+  "Complete a full cleaning run, open it in Cleaning History, and save it as a reference map.": "Eine vollständige Reinigung durchführen, im Reinigungsverlauf öffnen und als Referenzkarte speichern."
 }

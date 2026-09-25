@@ -1787,6 +1787,10 @@ components:
           minLength: 1
           x-maxUtf8Bytes: 48
           description: Non-empty identifier, limited to 48 UTF-8 bytes and unique across all zones and no-go lines
+        name:
+          type: string
+          x-maxUtf8Bytes: 64
+          description: Optional user-facing name limited to 64 UTF-8 bytes
         start:
           $ref: "#/components/schemas/MapPoint"
         end:

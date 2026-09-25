@@ -384,7 +384,7 @@ namespace {
         bool line() {
             if (!take('{'))
                 return fail("no-go line must be an object");
-            bool gotId = false, gotStart = false, gotEnd = false;
+            bool gotId = false, gotName = false, gotStart = false, gotEnd = false;
             char id[MAX_ID + 1] = {};
             double startX = 0, startY = 0, endX = 0, endY = 0;
             ws();
@@ -396,6 +396,11 @@ namespace {
                     gotId = string(id, sizeof(id));
                     if (!gotId)
                         return false;
+                } else if (!strcmp(key, "name") && !gotName) {
+                    char name[MAX_ZONE_NAME + 1];
+                    gotName = string(name, sizeof(name));
+                    if (!gotName || name[0] == '\0')
+                        return fail("no-go line name must not be empty");
                 } else if (!strcmp(key, "start") && !gotStart) {
                     gotStart = point(&startX, &startY);
                     if (!gotStart)

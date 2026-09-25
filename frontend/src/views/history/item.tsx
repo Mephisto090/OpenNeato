@@ -18,6 +18,7 @@ interface HistoryItemViewProps {
     mapEmpty: boolean;
     recording: boolean;
     distanceUnit: DistanceUnit;
+    onPinnedChange?: (pinned: boolean) => void;
 }
 
 // Persisted map rotation, in degrees. Always normalized to one of 0/90/180/270.
@@ -27,7 +28,14 @@ function loadRotation(): number {
     return (((Math.round(raw / 90) * 90) % 360) + 360) % 360;
 }
 
-export function HistoryItemView({ file, map, mapEmpty, recording, distanceUnit }: HistoryItemViewProps) {
+export function HistoryItemView({
+    file,
+    map,
+    mapEmpty,
+    recording,
+    distanceUnit,
+    onPinnedChange,
+}: HistoryItemViewProps) {
     const { t, formatDuration, formatNumber } = useI18n();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [rotation, setRotation] = useState<number>(loadRotation);
@@ -207,6 +215,7 @@ export function HistoryItemView({ file, map, mapEmpty, recording, distanceUnit }
                                 map={map}
                                 transform={transform}
                                 rotation={rotation}
+                                onPinnedChange={onPinnedChange}
                             />
                         )}
                     </>

@@ -11,6 +11,7 @@ interface MapEditorProps {
     map: MapData;
     transform: MapTransform;
     rotation: number;
+    onPinnedChange?: (pinned: boolean) => void;
 }
 
 type DrawMode = "idle" | "zone" | "no-go" | "move";
@@ -52,7 +53,7 @@ function isUsableZone(points: MapPoint[]): boolean {
     return Number.isFinite(area) && area > 1e-6;
 }
 
-export function MapEditor({ canvas, file, map, transform, rotation }: MapEditorProps) {
+export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChange }: MapEditorProps) {
     const { t } = useI18n();
     const [config, setConfig] = useState<MapConfig>(EMPTY_CONFIG);
     const [pinned, setPinned] = useState(file.pinned);
@@ -144,6 +145,7 @@ export function MapEditor({ canvas, file, map, transform, rotation }: MapEditorP
                         configRef.current = saved;
                         setConfig(saved);
                         setPinned(true);
+                        onPinnedChange?.(true);
                     } catch (e: unknown) {
                         setError(normalizeError(e, "Could not save map configuration"));
                     }
@@ -153,16 +155,27 @@ export function MapEditor({ canvas, file, map, transform, rotation }: MapEditorP
                     if (pendingSavesRef.current === 0) setSaving(false);
                 });
         },
-        [file.name],
+        [file.name, onPinnedChange],
     );
 
     const togglePinned = useCallback(async () => {
         setSaving(true);
         setError("");
         try {
-            await api.setHistoryPinned(file.name, !pinned);
-            setPinned(!pinned);
-            if (pinned) {
+            if (!pinned) {
+                const fallbackName = configRef.current.name || t("My reference map");
+                const name = window.prompt(t("Reference map name"), fallbackName);
+                const trimmed = name?.trim();
+                if (!trimmed) return;
+                const saved = await api.saveMapConfig(file.name, { ...configRef.current, name: trimmed });
+                configRef.current = saved;
+                setConfig(saved);
+                setPinned(true);
+                onPinnedChange?.(true);
+            } else {
+                await api.setHistoryPinned(file.name, false);
+                setPinned(false);
+                onPinnedChange?.(false);
                 setEditing(false);
                 setMode("idle");
                 setDraft([]);
@@ -172,7 +185,30 @@ export function MapEditor({ canvas, file, map, transform, rotation }: MapEditorP
         } finally {
             setSaving(false);
         }
-    }, [file.name, pinned]);
+    }, [file.name, onPinnedChange, pinned, t]);
+
+    const saveZone = useCallback(
+        (points: MapPoint[]) => {
+            if (saving || points.length < 3) return;
+            if (!isUsableZone(points)) {
+                setError(t("A room needs at least three distinct corners and must enclose an area."));
+                return;
+            }
+            const name = window.prompt(t("Room name"));
+            const trimmed = name?.trim();
+            if (!trimmed) return;
+            if (configRef.current.zones.some((item) => item.name.toLowerCase() === trimmed.toLowerCase())) {
+                setError(t("A room with this name already exists."));
+                return;
+            }
+            setDraft([]);
+            enqueueSave((current) => ({
+                ...current,
+                zones: [...current.zones, { id: newId("zone"), name: trimmed, points }],
+            }));
+        },
+        [enqueueSave, saving, t],
+    );
 
     const handleMapClick = useCallback(
         (event: MouseEvent) => {
@@ -180,40 +216,37 @@ export function MapEditor({ canvas, file, map, transform, rotation }: MapEditorP
             const rect = canvas.getBoundingClientRect();
             const point = toWorld({ x: event.clientX - rect.left, y: event.clientY - rect.top });
             if (!point) return;
+            if (mode === "zone" && draft.length >= 3) {
+                const first = toScreen(draft[0]);
+                const click = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+                if (Math.hypot(click.x - first.x, click.y - first.y) <= 18) {
+                    saveZone(draft);
+                    return;
+                }
+            }
             if (mode === "no-go" && draft.length === 1) {
                 const start = draft[0];
+                const fallbackName = t("No-go line {number}", { number: configRef.current.noGoLines.length + 1 });
+                const name = window.prompt(t("No-go line name"), fallbackName);
+                const trimmed = name?.trim();
+                if (!trimmed) return;
+                if (configRef.current.noGoLines.some((line) => line.name?.toLowerCase() === trimmed.toLowerCase())) {
+                    setError(t("A no-go line with this name already exists."));
+                    return;
+                }
                 setDraft([]);
                 enqueueSave((current) => ({
                     ...current,
-                    noGoLines: [...current.noGoLines, { id: newId("line"), start, end: point }],
+                    noGoLines: [...current.noGoLines, { id: newId("line"), name: trimmed, start, end: point }],
                 }));
                 return;
             }
             setDraft((current) => [...current, point]);
         },
-        [canvas, draft, enqueueSave, mode, saving, toWorld],
+        [canvas, draft, enqueueSave, mode, saveZone, saving, t, toScreen, toWorld],
     );
 
-    const finishZone = useCallback(() => {
-        if (saving || draft.length < 3) return;
-        if (!isUsableZone(draft)) {
-            setError(t("A room needs at least three distinct corners and must enclose an area."));
-            return;
-        }
-        const name = window.prompt(t("Room name"));
-        const trimmed = name?.trim();
-        if (!trimmed) return;
-        if (configRef.current.zones.some((item) => item.name.toLowerCase() === trimmed.toLowerCase())) {
-            setError(t("A room with this name already exists."));
-            return;
-        }
-        const points = draft;
-        setDraft([]);
-        enqueueSave((current) => ({
-            ...current,
-            zones: [...current.zones, { id: newId("zone"), name: trimmed, points }],
-        }));
-    }, [draft, enqueueSave, saving, t]);
+    const finishZone = useCallback(() => saveZone(draft), [draft, saveZone]);
 
     const removeZone = useCallback(
         (id: string) =>
@@ -247,6 +280,30 @@ export function MapEditor({ canvas, file, map, transform, rotation }: MapEditorP
             enqueueSave((current) => ({
                 ...current,
                 zones: current.zones.map((item) => (item.id === id ? { ...item, name: trimmed } : item)),
+            }));
+        },
+        [enqueueSave, t],
+    );
+
+    const renameLine = useCallback(
+        (id: string, fallbackName: string) => {
+            const line = configRef.current.noGoLines.find((item) => item.id === id);
+            if (!line) return;
+            const currentName = line.name ?? fallbackName;
+            const name = window.prompt(t("No-go line name"), currentName);
+            const trimmed = name?.trim();
+            if (!trimmed || trimmed === currentName) return;
+            if (
+                configRef.current.noGoLines.some(
+                    (item) => item.id !== id && item.name?.toLowerCase() === trimmed.toLowerCase(),
+                )
+            ) {
+                setError(t("A no-go line with this name already exists."));
+                return;
+            }
+            enqueueSave((current) => ({
+                ...current,
+                noGoLines: current.noGoLines.map((item) => (item.id === id ? { ...item, name: trimmed } : item)),
             }));
         },
         [enqueueSave, t],
@@ -318,17 +375,17 @@ export function MapEditor({ canvas, file, map, transform, rotation }: MapEditorP
     return (
         <div class="map-editor">
             <div class="map-editor-actions">
-                <button type="button" class="btn secondary" disabled={saving} onClick={togglePinned}>
-                    {pinned ? <T>Unpin map</T> : <T>Pin as map</T>}
+                <button type="button" class="map-editor-btn" disabled={saving} onClick={togglePinned}>
+                    {pinned ? <T>Remove reference map</T> : <T>Save as reference map</T>}
                 </button>
                 {pinned && (
                     <button
                         type="button"
-                        class="btn secondary"
+                        class="map-editor-btn"
                         disabled={saving}
                         onClick={() => setEditing((value) => !value)}
                     >
-                        {editing ? <T>Close editor</T> : <T>Edit rooms and no-go lines</T>}
+                        {editing ? <T>Close editor</T> : <T>Edit reference map</T>}
                     </button>
                 )}
             </div>
@@ -337,8 +394,9 @@ export function MapEditor({ canvas, file, map, transform, rotation }: MapEditorP
                     <div class="map-editor-toolbar">
                         <button
                             type="button"
-                            class={mode === "zone" ? "btn primary" : "btn secondary"}
+                            class={`map-editor-btn${mode === "zone" ? " active" : ""}`}
                             disabled={saving}
+                            aria-pressed={mode === "zone"}
                             onClick={() => {
                                 setMode("zone");
                                 setDraft([]);
@@ -348,8 +406,9 @@ export function MapEditor({ canvas, file, map, transform, rotation }: MapEditorP
                         </button>
                         <button
                             type="button"
-                            class={mode === "no-go" ? "btn primary" : "btn secondary"}
+                            class={`map-editor-btn${mode === "no-go" ? " active" : ""}`}
                             disabled={saving}
+                            aria-pressed={mode === "no-go"}
                             onClick={() => {
                                 setMode("no-go");
                                 setDraft([]);
@@ -359,8 +418,9 @@ export function MapEditor({ canvas, file, map, transform, rotation }: MapEditorP
                         </button>
                         <button
                             type="button"
-                            class={mode === "move" ? "btn primary" : "btn secondary"}
+                            class={`map-editor-btn${mode === "move" ? " active" : ""}`}
                             disabled={saving}
+                            aria-pressed={mode === "move"}
                             onClick={() => {
                                 setMode("move");
                                 setDraft([]);
@@ -369,19 +429,19 @@ export function MapEditor({ canvas, file, map, transform, rotation }: MapEditorP
                             <T>Move rooms</T>
                         </button>
                         {mode === "zone" && draft.length >= 3 && (
-                            <button type="button" class="btn primary" disabled={saving} onClick={finishZone}>
+                            <button type="button" class="map-editor-btn primary" disabled={saving} onClick={finishZone}>
                                 <T>Finish room</T>
                             </button>
                         )}
                         {draft.length > 0 && (
-                            <button type="button" class="btn secondary" disabled={saving} onClick={() => setDraft([])}>
+                            <button type="button" class="map-editor-btn" disabled={saving} onClick={() => setDraft([])}>
                                 <T>Cancel drawing</T>
                             </button>
                         )}
                     </div>
                     <p class="history-map-hint">
                         {mode === "zone"
-                            ? t("Tap at least three corners, then finish the room.")
+                            ? t("Tap at least three corners, then tap the first point again or finish the room.")
                             : mode === "no-go"
                               ? t("Tap the start and end of the no-go line.")
                               : mode === "move"
@@ -430,7 +490,13 @@ export function MapEditor({ canvas, file, map, transform, rotation }: MapEditorP
                         />
                     )}
                     {draftScreen.map((point, index) => (
-                        <circle key={index} cx={point.x} cy={point.y} r="4" class="map-draft-point" />
+                        <circle
+                            key={index}
+                            cx={point.x}
+                            cy={point.y}
+                            r={index === 0 && mode === "zone" ? 7 : 4}
+                            class={`map-draft-point${index === 0 && mode === "zone" ? " start" : ""}`}
+                        />
                     ))}
                 </svg>
             )}
@@ -457,16 +523,31 @@ export function MapEditor({ canvas, file, map, transform, rotation }: MapEditorP
                             </button>
                         </span>
                     ))}
-                    {config.noGoLines.map((line, index) => (
-                        <button
-                            type="button"
-                            class="map-editor-chip no-go"
-                            disabled={saving}
-                            onClick={() => removeLine(line.id)}
-                        >
-                            {t("No-go line {number}", { number: index + 1 })} ×
-                        </button>
-                    ))}
+                    {config.noGoLines.map((line, index) => {
+                        const fallbackName = t("No-go line {number}", { number: index + 1 });
+                        const displayName = line.name ?? fallbackName;
+                        return (
+                            <span class="map-editor-chip no-go">
+                                <button
+                                    type="button"
+                                    class="map-editor-chip-name"
+                                    disabled={saving}
+                                    onClick={() => renameLine(line.id, fallbackName)}
+                                >
+                                    {displayName}
+                                </button>
+                                <button
+                                    type="button"
+                                    class="map-editor-chip-delete"
+                                    disabled={saving}
+                                    onClick={() => removeLine(line.id)}
+                                    aria-label={t("Delete no-go line {name}", { name: displayName })}
+                                >
+                                    ×
+                                </button>
+                            </span>
+                        );
+                    })}
                 </div>
             )}
         </div>
