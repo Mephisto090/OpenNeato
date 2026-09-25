@@ -2402,6 +2402,31 @@ input:disabled {
     touch-action: manipulation;
 }
 
+.history-canvas-wrap.reference-map {
+    padding-bottom: 60px;
+}
+
+.history-canvas-wrap.reference-map .map-editor-overlay {
+    bottom: 60px;
+    height: auto;
+}
+
+.history-canvas-wrap.reference-map .history-rotate-btn {
+    top: calc((100% - 60px) / 2);
+}
+
+.history-canvas-wrap.reference-map .map-editor-actions {
+    bottom: 8px;
+}
+
+.history-canvas-wrap.reference-map .map-editor-items {
+    bottom: 72px;
+}
+
+.history-canvas-wrap.reference-map .map-editor-error {
+    bottom: 124px;
+}
+
 .history-rotate-btn {
     position: absolute;
     top: 50%;

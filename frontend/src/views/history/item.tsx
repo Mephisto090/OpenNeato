@@ -199,7 +199,7 @@ export function HistoryItemView({
                 afterwards the motion player or the static-render effect
                 takes over. The empty-data message replaces it only when
                 we know the session has no usable map. */}
-            <div class="history-canvas-wrap">
+            <div class={`history-canvas-wrap${referenceMap ? " reference-map" : ""}`}>
                 {mapEmpty && (
                     <div class="history-empty">
                         <T>Not enough data to display map</T>
