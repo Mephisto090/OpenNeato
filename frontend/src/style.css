@@ -3388,6 +3388,21 @@ input:disabled {
     background: rgba(180, 35, 35, 0.96);
     font-size: 12px;
 }
+.map-zone-label {
+    pointer-events: none;
+}
+.map-zone-label rect {
+    fill: color-mix(in srgb, var(--surface) 92%, transparent);
+    stroke: color-mix(in srgb, var(--border) 80%, transparent);
+    stroke-width: 1;
+}
+.map-zone-label text {
+    fill: var(--text);
+    font-size: 11px;
+    font-weight: 700;
+    text-anchor: middle;
+    dominant-baseline: central;
+}
 .map-zone-shape.movable {
     cursor: grab;
     pointer-events: all;

@@ -34,6 +34,33 @@ function roomColor(color: string | undefined, index: number): string {
     return color ?? ROOM_COLORS[index % ROOM_COLORS.length];
 }
 
+function zoneMetrics(points: MapPoint[]): { area: number; center: MapPoint } {
+    let twiceArea = 0;
+    let centerX = 0;
+    let centerY = 0;
+    for (let index = 0; index < points.length; index++) {
+        const current = points[index];
+        const next = points[(index + 1) % points.length];
+        const cross = current.x * next.y - next.x * current.y;
+        twiceArea += cross;
+        centerX += (current.x + next.x) * cross;
+        centerY += (current.y + next.y) * cross;
+    }
+    if (Math.abs(twiceArea) <= 1e-6) {
+        return {
+            area: 0,
+            center: {
+                x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
+                y: points.reduce((sum, point) => sum + point.y, 0) / points.length,
+            },
+        };
+    }
+    return {
+        area: Math.abs(twiceArea) / 2,
+        center: { x: centerX / (3 * twiceArea), y: centerY / (3 * twiceArea) },
+    };
+}
+
 function newId(prefix: string): string {
     return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -59,7 +86,7 @@ function isUsableZone(points: MapPoint[]): boolean {
 }
 
 export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChange }: MapEditorProps) {
-    const { t } = useI18n();
+    const { t, formatNumber } = useI18n();
     const [config, setConfig] = useState<MapConfig>(EMPTY_CONFIG);
     const [pinned, setPinned] = useState(file.pinned);
     const [editing, setEditing] = useState(false);
@@ -481,15 +508,30 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                     onPointerCancel={() => setDrag(null)}
                     aria-label={t("Map editor")}
                 >
-                    {displayConfig.zones.map((zone, index) => (
-                        <polygon
-                            key={zone.id}
-                            points={polygon(zone.points)}
-                            class={`map-zone-shape${mode === "move" ? " movable" : ""}`}
-                            style={{ fill: roomColor(zone.color, index), stroke: roomColor(zone.color, index) }}
-                            onPointerDown={(event) => startZoneDrag(event, zone.id)}
-                        />
-                    ))}
+                    {displayConfig.zones.map((zone, index) => {
+                        const color = roomColor(zone.color, index);
+                        const metrics = zoneMetrics(zone.points);
+                        const center = toScreen(metrics.center);
+                        const label = `${zone.name} · ${formatNumber(metrics.area, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} m²`;
+                        const labelWidth = Math.min(210, Math.max(96, label.length * 6.5 + 24));
+                        return (
+                            <g key={zone.id}>
+                                <polygon
+                                    points={polygon(zone.points)}
+                                    class={`map-zone-shape${mode === "move" ? " movable" : ""}`}
+                                    style={{ fill: color, stroke: color }}
+                                    onPointerDown={(event) => startZoneDrag(event, zone.id)}
+                                />
+                                <g class="map-zone-label" transform={`translate(${center.x} ${center.y})`}>
+                                    <rect x={-labelWidth / 2} y={-14} width={labelWidth} height={28} rx="14" />
+                                    <circle cx={-labelWidth / 2 + 13} cy="0" r="4" style={{ fill: color }} />
+                                    <text x="6" y="0">
+                                        {label}
+                                    </text>
+                                </g>
+                            </g>
+                        );
+                    })}
                     {displayConfig.noGoLines.map((line) => {
                         const start = toScreen(line.start);
                         const end = toScreen(line.end);
