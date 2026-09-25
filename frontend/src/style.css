@@ -2407,6 +2407,14 @@ input:disabled {
     overflow: visible;
 }
 
+.history-canvas-wrap.reference-map:has(.map-editor-toolbar) {
+    margin-top: 60px;
+}
+
+.history-canvas-wrap.reference-map .map-editor-toolbar {
+    top: -52px;
+}
+
 .history-canvas-wrap.reference-map .map-editor-overlay {
     bottom: 0;
 }
@@ -3462,6 +3470,13 @@ input:disabled {
         top: 8px;
         width: calc(100% - 80px);
         gap: 6px;
+    }
+    .history-canvas-wrap.reference-map:has(.map-editor-toolbar) {
+        margin-top: 84px;
+    }
+    .history-canvas-wrap.reference-map .map-editor-toolbar {
+        top: -76px;
+        width: 100%;
     }
     .map-editor-btn {
         min-height: 44px;
