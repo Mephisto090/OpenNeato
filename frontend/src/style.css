@@ -2479,7 +2479,7 @@ input:disabled {
 
 .history-canvas-wrap:has(.map-editor-items) .map-editor-items {
     right: 0;
-    bottom: -48px;
+    bottom: -58px;
     left: 0;
     max-width: none;
 }
@@ -3349,6 +3349,11 @@ input:disabled {
 }
 .map-editor-items::-webkit-scrollbar-track {
     background: transparent;
+}
+.map-editor-items::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
 }
 .map-editor-items::-webkit-scrollbar-thumb {
     border-radius: 999px;
