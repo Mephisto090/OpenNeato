@@ -131,6 +131,7 @@ export function renderMap(
     tf?: MapTransform,
     currentTime?: number,
     rotation = 0,
+    showRoute = true,
 ) {
     const ctx = canvas.getContext("2d");
     if (!ctx || !map.bounds) return;
@@ -201,7 +202,7 @@ export function renderMap(
         drawnPath.push(liveHead);
     }
 
-    if (drawnPath.length > 1) {
+    if (showRoute && drawnPath.length > 1) {
         ctx.beginPath();
         ctx.moveTo(toX(drawnPath[0].x), toY(drawnPath[0].y));
         for (let i = 1; i < drawnPath.length; i++) {
@@ -215,7 +216,7 @@ export function renderMap(
     }
 
     // Start point
-    if (map.path.length > 0) {
+    if (showRoute && map.path.length > 0) {
         const start = map.path[0];
         ctx.beginPath();
         ctx.arc(toX(start.x), toY(start.y), 5, 0, Math.PI * 2);
@@ -224,9 +225,9 @@ export function renderMap(
     }
 
     // End point / animated robot sprite
-    if (playing && liveHead) {
+    if (showRoute && playing && liveHead) {
         drawRobotSprite(ctx, toX(liveHead.x), toY(liveHead.y), liveHead.t);
-    } else if (map.path.length > 1) {
+    } else if (showRoute && map.path.length > 1) {
         const end = map.path[map.path.length - 1];
         const ex = toX(end.x);
         const ey = toY(end.y);
@@ -249,33 +250,34 @@ export function renderMap(
     }
 
     // Recharge points (bolt icon with glow) — hidden until reached during playback
-    for (const rp of map.recharges) {
-        if (rp.ts > tNow) continue;
-        const rx = toX(rp.x);
-        const ry = toY(rp.y);
-        const s = 10;
-        const drawBolt = () => {
-            ctx.beginPath();
-            ctx.moveTo(rx + s * 0.15, ry - s);
-            ctx.lineTo(rx - s * 0.55, ry + s * 0.05);
-            ctx.lineTo(rx - s * 0.05, ry + s * 0.05);
-            ctx.lineTo(rx - s * 0.15, ry + s);
-            ctx.lineTo(rx + s * 0.55, ry - s * 0.05);
-            ctx.lineTo(rx + s * 0.05, ry - s * 0.05);
-            ctx.closePath();
-        };
-        ctx.save();
-        ctx.shadowColor = "rgba(255, 204, 0, 0.7)";
-        ctx.shadowBlur = 8;
-        drawBolt();
-        ctx.fillStyle = "rgba(255, 204, 0, 1)";
-        ctx.fill();
-        ctx.restore();
-        drawBolt();
-        ctx.strokeStyle = isDark ? "rgba(0, 0, 0, 0.5)" : "rgba(0, 0, 0, 0.3)";
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-    }
+    if (showRoute)
+        for (const rp of map.recharges) {
+            if (rp.ts > tNow) continue;
+            const rx = toX(rp.x);
+            const ry = toY(rp.y);
+            const s = 10;
+            const drawBolt = () => {
+                ctx.beginPath();
+                ctx.moveTo(rx + s * 0.15, ry - s);
+                ctx.lineTo(rx - s * 0.55, ry + s * 0.05);
+                ctx.lineTo(rx - s * 0.05, ry + s * 0.05);
+                ctx.lineTo(rx - s * 0.15, ry + s);
+                ctx.lineTo(rx + s * 0.55, ry - s * 0.05);
+                ctx.lineTo(rx + s * 0.05, ry - s * 0.05);
+                ctx.closePath();
+            };
+            ctx.save();
+            ctx.shadowColor = "rgba(255, 204, 0, 0.7)";
+            ctx.shadowBlur = 8;
+            drawBolt();
+            ctx.fillStyle = "rgba(255, 204, 0, 1)";
+            ctx.fill();
+            ctx.restore();
+            drawBolt();
+            ctx.strokeStyle = isDark ? "rgba(0, 0, 0, 0.5)" : "rgba(0, 0, 0, 0.3)";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
 }
 
 // Draws the animated robot sprite: a filled circle with a small nose pointing

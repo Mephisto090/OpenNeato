@@ -270,6 +270,7 @@ export function HistoryView({ distanceUnit, mapsOnly = false }: HistoryViewProps
                         mapEmpty={mapEmpty}
                         recording={selectedRecording}
                         distanceUnit={distanceUnit}
+                        referenceMap={mapsOnly}
                         onPinnedChange={(pinned) =>
                             setFiles((current) =>
                                 current.map((file) => (file.name === selectedFile.name ? { ...file, pinned } : file)),

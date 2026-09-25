@@ -19,6 +19,7 @@ interface HistoryItemViewProps {
     recording: boolean;
     distanceUnit: DistanceUnit;
     onPinnedChange?: (pinned: boolean) => void;
+    referenceMap?: boolean;
 }
 
 // Persisted map rotation, in degrees. Always normalized to one of 0/90/180/270.
@@ -35,6 +36,7 @@ export function HistoryItemView({
     recording,
     distanceUnit,
     onPinnedChange,
+    referenceMap = false,
 }: HistoryItemViewProps) {
     const { t, formatDuration, formatNumber } = useI18n();
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -60,7 +62,10 @@ export function HistoryItemView({
     // and the brief carrier-driven reveal phase. Flips to false when the
     // carrier wave's trailing edge clears the canvas, at which point the
     // wave hands the canvas back to the motion player / static render.
-    const [revealing, setRevealing] = useState<boolean>(true);
+    const [revealing, setRevealing] = useState<boolean>(!referenceMap);
+    useEffect(() => {
+        if (referenceMap) setRevealing(false);
+    }, [referenceMap]);
 
     // Single Wave instance lives across the loading -> revealing
     // transition so in-flight idle pulses carry over into the reveal
@@ -68,6 +73,7 @@ export function HistoryItemView({
     // on mount; a separate effect calls startReveal() when map arrives.
     const waveRef = useRef<Wave | null>(null);
     useEffect(() => {
+        if (referenceMap) return;
         const canvas = canvasRef.current;
         if (!canvas) return;
         const wave = new Wave({ canvas });
@@ -81,7 +87,7 @@ export function HistoryItemView({
             wave.cancel();
             waveRef.current = null;
         };
-    }, []);
+    }, [referenceMap]);
 
     // Kick the reveal phase the first time map data arrives. The wave
     // keeps its existing in-flight idle pulses; the carrier joins them
@@ -90,7 +96,7 @@ export function HistoryItemView({
     // reveal animation runs once.
     const revealStartedRef = useRef(false);
     useEffect(() => {
-        if (revealStartedRef.current) return;
+        if (referenceMap || revealStartedRef.current) return;
         if (!map || map.path.length === 0) return;
         const wave = waveRef.current;
         if (!wave) return;
@@ -103,7 +109,7 @@ export function HistoryItemView({
     // present. While `revealing` is true its canvas effects are
     // suspended via the `canvasSuspended` prop — controls render and
     // are interactive, but it doesn't fight the wave for the canvas.
-    const showPlayer = !recording && map !== null && map.path.length > 0;
+    const showPlayer = !referenceMap && !recording && map !== null && map.path.length > 0;
 
     // Static render fallback — only when the player is not present
     // (recording sessions). The player handles its own canvas draws when
@@ -113,20 +119,21 @@ export function HistoryItemView({
         if (showPlayer) return;
         if (revealing) return;
         if (map && canvasRef.current) {
-            renderMap(canvasRef.current, map, recording, transform, undefined, rotation);
+            renderMap(canvasRef.current, map, recording, transform, undefined, rotation, !referenceMap);
         }
-    }, [map, recording, transform, showPlayer, revealing, rotation]);
+    }, [map, recording, transform, showPlayer, revealing, rotation, referenceMap]);
 
     useEffect(() => {
         if (showPlayer) return;
         if (revealing) return;
         if (!map) return;
         const handleResize = () => {
-            if (map && canvasRef.current) renderMap(canvasRef.current, map, recording, transform, undefined, rotation);
+            if (map && canvasRef.current)
+                renderMap(canvasRef.current, map, recording, transform, undefined, rotation, !referenceMap);
         };
         window.addEventListener("resize", handleResize);
         return () => window.removeEventListener("resize", handleResize);
-    }, [map, recording, transform, showPlayer, revealing, rotation]);
+    }, [map, recording, transform, showPlayer, revealing, rotation, referenceMap]);
 
     // Prefer list metadata summary (available immediately), fall back to
     // the summary parsed from the full JSONL data (available after fetch)
@@ -136,7 +143,7 @@ export function HistoryItemView({
     return (
         <>
             {/* Summary bar */}
-            {summary && (
+            {!referenceMap && summary && (
                 <div class="history-detail-stats">
                     <div class="history-stat">
                         <span class="history-stat-label">
@@ -236,7 +243,7 @@ export function HistoryItemView({
             )}
 
             {/* Legend */}
-            {map && (
+            {!referenceMap && map && (
                 <div class="history-legend">
                     <span class="history-legend-item">
                         <span class="history-legend-dot start" /> <T>Start</T>
