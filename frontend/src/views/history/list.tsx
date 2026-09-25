@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "preact/hooks";
+import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { api } from "../../api";
 import boltSvg from "../../assets/icons/bolt.svg?raw";
 import clockSvg from "../../assets/icons/clock.svg?raw";
@@ -21,6 +21,8 @@ interface SessionCardProps {
     active?: boolean;
     pinned?: boolean;
     allowDelete?: boolean;
+    referenceCard?: boolean;
+    referenceName?: string;
     onSelect: (i: number) => void;
     onDelete: (i: number) => void;
     distanceUnit: DistanceUnit;
@@ -34,6 +36,8 @@ function SessionCard({
     active,
     pinned,
     allowDelete = true,
+    referenceCard = false,
+    referenceName,
     onSelect,
     onDelete,
     distanceUnit,
@@ -49,8 +53,8 @@ function SessionCard({
                 <div class="history-session-body">
                     <div class="history-session-header">
                         <span class="history-session-mode">
-                            {t(info.label)}
-                            {pinned && (
+                            {referenceCard ? referenceName || t("Reference Map") : t(info.label)}
+                            {pinned && !referenceCard && (
                                 <span class="history-map-badge">
                                     <T>Reference map</T>
                                 </span>
@@ -63,7 +67,7 @@ function SessionCard({
                         </span>
                         <span class="history-session-date">{session ? formatDateTime(session.time) : ""}</span>
                     </div>
-                    {summary && (
+                    {!referenceCard && summary && (
                         <div class="history-session-stats">
                             <span>
                                 <Icon svg={clockSvg} />
@@ -134,7 +138,31 @@ export function HistoryListView({
     const { t } = useI18n();
     const [confirmTarget, setConfirmTarget] = useState<string | null>(null);
     const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
+    const [mapNames, setMapNames] = useState<Record<string, string>>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (!mapsOnly || files.length === 0) {
+            setMapNames({});
+            return;
+        }
+        let cancelled = false;
+        Promise.all(
+            files.map(async (file) => {
+                try {
+                    const config = await api.getMapConfig(file.name);
+                    return [file.name, config.name.trim()] as const;
+                } catch {
+                    return [file.name, ""] as const;
+                }
+            }),
+        ).then((entries) => {
+            if (!cancelled) setMapNames(Object.fromEntries(entries));
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [files, mapsOnly]);
 
     const handleConfirmDelete = useCallback(() => {
         if (!confirmTarget) return;
@@ -284,6 +312,8 @@ export function HistoryListView({
                     active={f.recording}
                     pinned={f.pinned}
                     allowDelete={!mapsOnly}
+                    referenceCard={mapsOnly}
+                    referenceName={mapNames[f.name]}
                     onSelect={onSelect}
                     onDelete={() => setConfirmTarget(`session-${i}`)}
                     distanceUnit={distanceUnit}
