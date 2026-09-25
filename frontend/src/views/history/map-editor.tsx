@@ -201,9 +201,9 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
         try {
             if (!pinned) {
                 const fallbackName = configRef.current.name || t("My reference map");
-                const name = window.prompt(t("Reference map name"), fallbackName);
-                const trimmed = name?.trim();
-                if (!trimmed) return;
+                const name = window.prompt(t("Reference map name"));
+                if (name === null) return;
+                const trimmed = name.trim() || fallbackName;
                 const saved = await api.saveMapConfig(file.name, { ...configRef.current, name: trimmed });
                 configRef.current = saved;
                 setConfig(saved);

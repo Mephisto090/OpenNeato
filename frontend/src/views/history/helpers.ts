@@ -10,6 +10,13 @@ const DEFAULT_TRANSFORM: MapTransform = { panX: 0, panY: 0, zoom: 1 };
 const MAP_PAD = 20;
 const GRID_STEP = 0.5;
 
+const CONCATENATED_REFERENCE_SUFFIX = /(\S)(Reference map|Referenzkarte|Carte de référence|Referans haritam)$/i;
+
+export function displayReferenceMapName(name: string): string {
+    const trimmed = name.trim();
+    return trimmed.replace(CONCATENATED_REFERENCE_SUFFIX, "$1").trim() || trimmed;
+}
+
 export interface MapProjection {
     minX: number;
     maxX: number;

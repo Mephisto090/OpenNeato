@@ -10,7 +10,7 @@ import { T, useI18n } from "../../i18n";
 import { formatArea, formatDistance, type DistanceUnit } from "../../distance-units";
 import type { HistoryFileInfo, MapSession, MapSummary } from "../../types";
 import { normalizeError } from "../../utils";
-import { modeInfo } from "./helpers";
+import { displayReferenceMapName, modeInfo } from "./helpers";
 
 // Session card component
 interface SessionCardProps {
@@ -55,7 +55,11 @@ function SessionCard({
                 <div class="history-session-body">
                     <div class="history-session-header">
                         <span class="history-session-mode">
-                            {referenceCard ? referenceName || t("Reference Map") : t(info.label)}
+                            {referenceCard
+                                ? referenceName
+                                    ? displayReferenceMapName(referenceName)
+                                    : t("Reference Map")
+                                : t(info.label)}
                             {pinned && !referenceCard && (
                                 <span class="history-map-badge">
                                     <T>Reference map</T>
