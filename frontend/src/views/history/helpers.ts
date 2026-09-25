@@ -132,6 +132,7 @@ export function renderMap(
     currentTime?: number,
     rotation = 0,
     showRoute = true,
+    showDock = false,
 ) {
     const ctx = canvas.getContext("2d");
     if (!ctx || !map.bounds) return;
@@ -224,6 +225,11 @@ export function renderMap(
         ctx.fill();
     }
 
+    if (showDock && map.path.length > 0) {
+        const dock = map.path[0];
+        drawDockMarker(ctx, toX(dock.x), toY(dock.y), dock.t);
+    }
+
     // End point / animated robot sprite
     if (showRoute && playing && liveHead) {
         drawRobotSprite(ctx, toX(liveHead.x), toY(liveHead.y), liveHead.t);
@@ -278,6 +284,39 @@ export function renderMap(
             ctx.lineWidth = 1.5;
             ctx.stroke();
         }
+}
+
+// Draws a fixed dock plus the robot heading at the map anchor. The dock sits
+// behind the robot, while the wedge points in the direction it leaves the base.
+function drawDockMarker(ctx: CanvasRenderingContext2D, x: number, y: number, thetaDeg: number) {
+    const screenAngle = -(thetaDeg * Math.PI) / 180;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(screenAngle);
+    ctx.shadowColor = "rgba(255, 204, 0, 0.45)";
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = "rgba(255, 204, 0, 0.95)";
+    ctx.fillRect(-12, -9, 4, 18);
+    ctx.shadowBlur = 0;
+
+    ctx.beginPath();
+    ctx.arc(0, 0, 6, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(52, 199, 89, 0.95)";
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(11, 0);
+    ctx.lineTo(5, -4);
+    ctx.lineTo(5, 4);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(0, 0, 2, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+    ctx.fill();
+    ctx.restore();
 }
 
 // Draws the animated robot sprite: a filled circle with a small nose pointing

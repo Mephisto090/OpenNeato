@@ -119,7 +119,7 @@ export function HistoryItemView({
         if (showPlayer) return;
         if (revealing) return;
         if (map && canvasRef.current) {
-            renderMap(canvasRef.current, map, recording, transform, undefined, rotation, !referenceMap);
+            renderMap(canvasRef.current, map, recording, transform, undefined, rotation, !referenceMap, referenceMap);
         }
     }, [map, recording, transform, showPlayer, revealing, rotation, referenceMap]);
 
@@ -129,7 +129,16 @@ export function HistoryItemView({
         if (!map) return;
         const handleResize = () => {
             if (map && canvasRef.current)
-                renderMap(canvasRef.current, map, recording, transform, undefined, rotation, !referenceMap);
+                renderMap(
+                    canvasRef.current,
+                    map,
+                    recording,
+                    transform,
+                    undefined,
+                    rotation,
+                    !referenceMap,
+                    referenceMap,
+                );
         };
         window.addEventListener("resize", handleResize);
         return () => window.removeEventListener("resize", handleResize);
