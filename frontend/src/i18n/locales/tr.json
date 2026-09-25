@@ -434,6 +434,7 @@
   "A room with this name already exists.": "Bu ada sahip bir oda zaten var.",
   "A room needs at least three distinct corners and must enclose an area.": "Bir oda en az üç farklı köşeye sahip olmalı ve bir alanı çevrelemelidir.",
   "Delete room {name}": "{name} odasını sil",
+  "Choose color for room {name}": "{name} odası için renk seç",
   "No-go line name": "Girilmez çizgi adı",
   "A no-go line with this name already exists.": "Bu ada sahip bir girilmez çizgi zaten var.",
   "Delete no-go line {name}": "{name} girilmez çizgisini sil",

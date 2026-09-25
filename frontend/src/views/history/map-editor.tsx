@@ -28,6 +28,11 @@ interface CanvasSize {
 }
 
 const EMPTY_CONFIG: MapConfig = { version: 1, name: "", zones: [], noGoLines: [] };
+const ROOM_COLORS = ["#34C759", "#0A84FF", "#BF5AF2", "#FF9F0A", "#64D2FF", "#FF375F", "#FFD60A", "#30D158"];
+
+function roomColor(color: string | undefined, index: number): string {
+    return color ?? ROOM_COLORS[index % ROOM_COLORS.length];
+}
 
 function newId(prefix: string): string {
     return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -202,10 +207,16 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                 return;
             }
             setDraft([]);
-            enqueueSave((current) => ({
-                ...current,
-                zones: [...current.zones, { id: newId("zone"), name: trimmed, points }],
-            }));
+            enqueueSave((current) => {
+                const usedColors = new Set(current.zones.map((zone, index) => roomColor(zone.color, index)));
+                const color =
+                    ROOM_COLORS.find((candidate) => !usedColors.has(candidate)) ??
+                    ROOM_COLORS[current.zones.length % ROOM_COLORS.length];
+                return {
+                    ...current,
+                    zones: [...current.zones, { id: newId("zone"), name: trimmed, color, points }],
+                };
+            });
         },
         [enqueueSave, saving, t],
     );
@@ -283,6 +294,15 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
             }));
         },
         [enqueueSave, t],
+    );
+
+    const changeZoneColor = useCallback(
+        (id: string, color: string) =>
+            enqueueSave((current) => ({
+                ...current,
+                zones: current.zones.map((zone) => (zone.id === id ? { ...zone, color } : zone)),
+            })),
+        [enqueueSave],
     );
 
     const renameLine = useCallback(
@@ -461,11 +481,12 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                     onPointerCancel={() => setDrag(null)}
                     aria-label={t("Map editor")}
                 >
-                    {displayConfig.zones.map((zone) => (
+                    {displayConfig.zones.map((zone, index) => (
                         <polygon
                             key={zone.id}
                             points={polygon(zone.points)}
                             class={`map-zone-shape${mode === "move" ? " movable" : ""}`}
+                            style={{ fill: roomColor(zone.color, index), stroke: roomColor(zone.color, index) }}
                             onPointerDown={(event) => startZoneDrag(event, zone.id)}
                         />
                     ))}
@@ -502,8 +523,8 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
             )}
             {editing && (
                 <div class="map-editor-items">
-                    {config.zones.map((zone) => (
-                        <span class="map-editor-chip zone">
+                    {config.zones.map((zone, index) => (
+                        <span class="map-editor-chip zone" style={{ borderColor: roomColor(zone.color, index) }}>
                             <button
                                 type="button"
                                 class="map-editor-chip-name"
@@ -512,6 +533,14 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                             >
                                 {zone.name}
                             </button>
+                            <input
+                                type="color"
+                                class="map-editor-chip-color"
+                                value={roomColor(zone.color, index)}
+                                disabled={saving}
+                                onChange={(event) => changeZoneColor(zone.id, event.currentTarget.value.toUpperCase())}
+                                aria-label={t("Choose color for room {name}", { name: zone.name })}
+                            />
                             <button
                                 type="button"
                                 class="map-editor-chip-delete"

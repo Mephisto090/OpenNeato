@@ -125,9 +125,11 @@ const isMapConfig = (config) => {
     if (!Array.isArray(config.noGoLines) || config.noGoLines.length > 32) return false;
     const ids = new Set();
     for (const zone of config.zones) {
-        if (!hasExactKeys(zone, ["id", "name", "points"])) return false;
+        const keys = Object.hasOwn(zone, "color") ? ["id", "name", "color", "points"] : ["id", "name", "points"];
+        if (!hasExactKeys(zone, keys)) return false;
         if (!utf8LengthAtMost(zone.id, 48) || zone.id.length === 0 || ids.has(zone.id)) return false;
         if (!utf8LengthAtMost(zone.name, 64)) return false;
+        if (zone.color !== undefined && !/^#[0-9A-Fa-f]{6}$/.test(zone.color)) return false;
         if (!Array.isArray(zone.points) || zone.points.length < 3 || zone.points.length > 64) return false;
         if (!zone.points.every(isMapPoint) || !zoneHasArea(zone.points)) return false;
         ids.add(zone.id);

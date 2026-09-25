@@ -1767,6 +1767,10 @@ components:
           type: string
           x-maxUtf8Bytes: 64
           description: Display name limited to 64 UTF-8 bytes
+        color:
+          type: string
+          pattern: "^#[0-9A-Fa-f]{6}$"
+          description: Optional room color as a six-digit hexadecimal RGB value
         points:
           type: array
           minItems: 3

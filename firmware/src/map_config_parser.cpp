@@ -290,7 +290,7 @@ namespace {
         bool zone() {
             if (!take('{'))
                 return fail("zone must be an object");
-            bool gotId = false, gotName = false, gotPoints = false;
+            bool gotId = false, gotName = false, gotColor = false, gotPoints = false;
             char id[MAX_ID + 1] = {};
             ws();
             while (!at('}')) {
@@ -306,6 +306,14 @@ namespace {
                     gotName = string(name, sizeof(name));
                     if (!gotName)
                         return false;
+                } else if (!strcmp(key, "color") && !gotColor) {
+                    char color[8];
+                    gotColor = string(color, sizeof(color));
+                    if (!gotColor || strlen(color) != 7 || color[0] != '#')
+                        return fail("zone color must use #RRGGBB format");
+                    for (size_t i = 1; i < 7; i++)
+                        if (!isxdigit(static_cast<unsigned char>(color[i])))
+                            return fail("zone color must use #RRGGBB format");
                 } else if (!strcmp(key, "points") && !gotPoints) {
                     gotPoints = true;
                     if (!take('['))

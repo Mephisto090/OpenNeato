@@ -434,6 +434,7 @@
   "A room with this name already exists.": "Une pièce portant ce nom existe déjà.",
   "A room needs at least three distinct corners and must enclose an area.": "Une pièce nécessite au moins trois coins distincts et doit délimiter une surface.",
   "Delete room {name}": "Supprimer la pièce {name}",
+  "Choose color for room {name}": "Choisir la couleur de la pièce {name}",
   "No-go line name": "Nom de la ligne interdite",
   "A no-go line with this name already exists.": "Une ligne interdite portant ce nom existe déjà.",
   "Delete no-go line {name}": "Supprimer la ligne interdite {name}",
