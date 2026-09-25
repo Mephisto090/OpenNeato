@@ -448,6 +448,10 @@
   "Reference Maps": "Referenzkarten",
   "reference map": "Referenzkarte",
   "reference maps": "Referenzkarten",
+  "room": "Raum",
+  "rooms": "Räume",
+  "no-go line": "No-Go-Linie",
+  "no-go lines": "No-Go-Linien",
   "No reference map yet": "Noch keine Referenzkarte",
   "Complete a full cleaning run, open it in Cleaning History, and save it as a reference map.": "Eine vollständige Reinigung durchführen, im Reinigungsverlauf öffnen und als Referenzkarte speichern."
 }

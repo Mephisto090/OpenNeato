@@ -448,6 +448,10 @@
   "Reference Maps": "Referans Haritalar",
   "reference map": "referans harita",
   "reference maps": "referans haritalar",
+  "room": "oda",
+  "rooms": "oda",
+  "no-go line": "yasaklı çizgi",
+  "no-go lines": "yasaklı çizgi",
   "No reference map yet": "Henüz referans harita yok",
   "Complete a full cleaning run, open it in Cleaning History, and save it as a reference map.": "Tam bir temizlik çalıştırın, Temizlik Geçmişinde açın ve referans harita olarak kaydedin."
 }

@@ -23,6 +23,7 @@ interface SessionCardProps {
     allowDelete?: boolean;
     referenceCard?: boolean;
     referenceName?: string;
+    referenceDetails?: { rooms: number; noGoLines: number };
     onSelect: (i: number) => void;
     onDelete: (i: number) => void;
     distanceUnit: DistanceUnit;
@@ -38,6 +39,7 @@ function SessionCard({
     allowDelete = true,
     referenceCard = false,
     referenceName,
+    referenceDetails,
     onSelect,
     onDelete,
     distanceUnit,
@@ -67,6 +69,22 @@ function SessionCard({
                         </span>
                         <span class="history-session-date">{session ? formatDateTime(session.time) : ""}</span>
                     </div>
+                    {referenceCard && (summary || referenceDetails) && (
+                        <div class="history-session-stats">
+                            {summary && <span>{formatArea(summary.areaCovered, distanceUnit, formatNumber)}</span>}
+                            {referenceDetails && (
+                                <>
+                                    <span>
+                                        {referenceDetails.rooms} {t(referenceDetails.rooms === 1 ? "room" : "rooms")}
+                                    </span>
+                                    <span>
+                                        {referenceDetails.noGoLines}{" "}
+                                        {t(referenceDetails.noGoLines === 1 ? "no-go line" : "no-go lines")}
+                                    </span>
+                                </>
+                            )}
+                        </div>
+                    )}
                     {!referenceCard && summary && (
                         <div class="history-session-stats">
                             <span>
@@ -138,12 +156,14 @@ export function HistoryListView({
     const { t } = useI18n();
     const [confirmTarget, setConfirmTarget] = useState<string | null>(null);
     const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
-    const [mapNames, setMapNames] = useState<Record<string, string>>({});
+    const [mapDetails, setMapDetails] = useState<Record<string, { name: string; rooms: number; noGoLines: number }>>(
+        {},
+    );
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (!mapsOnly || files.length === 0) {
-            setMapNames({});
+            setMapDetails({});
             return;
         }
         let cancelled = false;
@@ -151,13 +171,16 @@ export function HistoryListView({
             files.map(async (file) => {
                 try {
                     const config = await api.getMapConfig(file.name);
-                    return [file.name, config.name.trim()] as const;
+                    return [
+                        file.name,
+                        { name: config.name.trim(), rooms: config.zones.length, noGoLines: config.noGoLines.length },
+                    ] as const;
                 } catch {
-                    return [file.name, ""] as const;
+                    return [file.name, { name: "", rooms: 0, noGoLines: 0 }] as const;
                 }
             }),
         ).then((entries) => {
-            if (!cancelled) setMapNames(Object.fromEntries(entries));
+            if (!cancelled) setMapDetails(Object.fromEntries(entries));
         });
         return () => {
             cancelled = true;
@@ -313,7 +336,8 @@ export function HistoryListView({
                     pinned={f.pinned}
                     allowDelete={!mapsOnly}
                     referenceCard={mapsOnly}
-                    referenceName={mapNames[f.name]}
+                    referenceName={mapDetails[f.name]?.name}
+                    referenceDetails={mapDetails[f.name]}
                     onSelect={onSelect}
                     onDelete={() => setConfirmTarget(`session-${i}`)}
                     distanceUnit={distanceUnit}
