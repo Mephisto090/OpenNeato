@@ -3257,7 +3257,7 @@ input:disabled {
     width: min(calc(100% - 88px), 560px);
     transform: translateX(-50%);
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 .map-editor-items {
     right: 12px;

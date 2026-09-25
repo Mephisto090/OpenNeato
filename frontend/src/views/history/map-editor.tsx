@@ -14,7 +14,7 @@ interface MapEditorProps {
     onPinnedChange?: (pinned: boolean) => void;
 }
 
-type DrawMode = "idle" | "zone" | "no-go" | "move";
+type DrawMode = "idle" | "zone" | "rectangle" | "no-go" | "move";
 
 interface DragState {
     zoneId: string;
@@ -250,7 +250,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
 
     const handleMapClick = useCallback(
         (event: MouseEvent) => {
-            if (saving || (mode !== "zone" && mode !== "no-go") || !canvas) return;
+            if (saving || (mode !== "zone" && mode !== "rectangle" && mode !== "no-go") || !canvas) return;
             const rect = canvas.getBoundingClientRect();
             const point = toWorld({ x: event.clientX - rect.left, y: event.clientY - rect.top });
             if (!point) return;
@@ -261,6 +261,11 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                     saveZone(draft);
                     return;
                 }
+            }
+            if (mode === "rectangle" && draft.length === 1) {
+                const start = draft[0];
+                saveZone([start, { x: point.x, y: start.y }, point, { x: start.x, y: point.y }]);
+                return;
             }
             if (mode === "no-go" && draft.length === 1) {
                 const start = draft[0];
@@ -449,7 +454,19 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                                 setDraft([]);
                             }}
                         >
-                            <T>Draw room</T>
+                            <T>Freeform room</T>
+                        </button>
+                        <button
+                            type="button"
+                            class={`map-editor-btn${mode === "rectangle" ? " active" : ""}`}
+                            disabled={saving}
+                            aria-pressed={mode === "rectangle"}
+                            onClick={() => {
+                                setMode("rectangle");
+                                setDraft([]);
+                            }}
+                        >
+                            <T>Rectangular room</T>
                         </button>
                         <button
                             type="button"
@@ -489,11 +506,13 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                     <p class="history-map-hint">
                         {mode === "zone"
                             ? t("Tap at least three corners, then tap the first point again or finish the room.")
-                            : mode === "no-go"
-                              ? t("Tap the start and end of the no-go line.")
-                              : mode === "move"
-                                ? t("Drag a room to move it.")
-                                : t("Choose a drawing tool.")}
+                            : mode === "rectangle"
+                              ? t("Tap two opposite corners to create a rectangular room.")
+                              : mode === "no-go"
+                                ? t("Tap the start and end of the no-go line.")
+                                : mode === "move"
+                                  ? t("Drag a room to move it.")
+                                  : t("Choose a drawing tool.")}
                     </p>
                 </>
             )}
