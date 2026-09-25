@@ -8,7 +8,7 @@ import { Icon } from "../../components/icon";
 import { T, useI18n } from "../../i18n";
 import type { HistoryFileInfo, MapConfig, MapData, MapPoint, MapTransform } from "../../types";
 import { normalizeError } from "../../utils";
-import { computeMapProjection } from "./helpers";
+import { computeMapProjection, translateExampleMapName } from "./helpers";
 
 interface MapEditorProps {
     canvas: HTMLCanvasElement | null;
@@ -540,7 +540,8 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                         const color = roomColor(zone.color, index);
                         const metrics = zoneMetrics(zone.points);
                         const center = toScreen(metrics.center);
-                        const label = `${zone.name} · ${formatNumber(metrics.area, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} m²`;
+                        const displayName = translateExampleMapName(zone.name, t);
+                        const label = `${displayName} · ${formatNumber(metrics.area, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} m²`;
                         const labelWidth = Math.min(210, Math.max(96, label.length * 6.5 + 24));
                         return (
                             <g key={zone.id}>
@@ -601,7 +602,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                                 disabled={saving}
                                 onClick={() => renameZone(zone.id)}
                             >
-                                {zone.name}
+                                {translateExampleMapName(zone.name, t)}
                             </button>
                             <input
                                 type="color"
@@ -609,14 +610,16 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                                 value={roomColor(zone.color, index)}
                                 disabled={saving}
                                 onChange={(event) => changeZoneColor(zone.id, event.currentTarget.value.toUpperCase())}
-                                aria-label={t("Choose color for room {name}", { name: zone.name })}
+                                aria-label={t("Choose color for room {name}", {
+                                    name: translateExampleMapName(zone.name, t),
+                                })}
                             />
                             <button
                                 type="button"
                                 class="map-editor-chip-delete"
                                 disabled={saving}
                                 onClick={() => removeZone(zone.id)}
-                                aria-label={t("Delete room {name}", { name: zone.name })}
+                                aria-label={t("Delete room {name}", { name: translateExampleMapName(zone.name, t) })}
                             >
                                 ×
                             </button>
@@ -624,7 +627,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                     ))}
                     {config.noGoLines.map((line, index) => {
                         const fallbackName = t("No-go line {number}", { number: index + 1 });
-                        const displayName = line.name ?? fallbackName;
+                        const displayName = translateExampleMapName(line.name ?? fallbackName, t);
                         return (
                             <span class="map-editor-chip no-go">
                                 <button

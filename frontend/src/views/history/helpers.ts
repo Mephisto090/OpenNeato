@@ -17,6 +17,33 @@ export function displayReferenceMapName(name: string): string {
     return trimmed.replace(CONCATENATED_REFERENCE_SUFFIX, "$1").trim() || trimmed;
 }
 
+type Translate = (text: string, values?: Record<string, string | number>) => string;
+
+export function translateExampleMapName(name: string, t: Translate): string {
+    switch (name) {
+        case "__example_ground_floor__":
+            return t("Ground floor");
+        case "__example_living_room__":
+            return t("Living room");
+        case "__example_kitchen__":
+            return t("Kitchen");
+        case "__example_bedroom__":
+            return t("Bedroom");
+        case "__example_office__":
+            return t("Office");
+        case "__example_hallway__":
+            return t("Hallway");
+        case "__example_fireplace__":
+            return t("Fireplace");
+        case "__example_kitchen_island__":
+            return t("Kitchen island");
+        case "__example_desk_cables__":
+            return t("Desk cables");
+        default:
+            return name;
+    }
+}
+
 export interface MapProjection {
     minX: number;
     maxX: number;
