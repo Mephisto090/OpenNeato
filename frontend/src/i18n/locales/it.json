@@ -436,6 +436,7 @@
   "Drag a room to move it.": "Trascinare una stanza per spostarla.",
   "A room with this name already exists.": "Esiste già una stanza con questo nome.",
   "A room needs at least three distinct corners and must enclose an area.": "Una stanza deve avere almeno tre angoli distinti e racchiudere un’area.",
+  "The start and end of a no-go line must be different.": "L’inizio e la fine di una linea vietata devono essere diversi.",
   "Delete room {name}": "Elimina stanza {name}",
   "Choose color for room {name}": "Scegli il colore per la stanza {name}",
   "No-go line name": "Nome della linea di esclusione",

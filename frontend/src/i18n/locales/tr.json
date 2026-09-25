@@ -436,6 +436,7 @@
   "Drag a room to move it.": "Taşımak için bir odayı sürükleyin.",
   "A room with this name already exists.": "Bu ada sahip bir oda zaten var.",
   "A room needs at least three distinct corners and must enclose an area.": "Bir oda en az üç farklı köşeye sahip olmalı ve bir alanı çevrelemelidir.",
+  "The start and end of a no-go line must be different.": "Girilmeyecek bölge çizgisinin başlangıç ve bitiş noktaları farklı olmalıdır.",
   "Delete room {name}": "{name} odasını sil",
   "Choose color for room {name}": "{name} odası için renk seç",
   "No-go line name": "Girilmez çizgi adı",

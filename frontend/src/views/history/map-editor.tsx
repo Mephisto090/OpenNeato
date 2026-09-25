@@ -99,6 +99,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
     const [draft, setDraft] = useState<MapPoint[]>([]);
     const [drag, setDrag] = useState<DragState | null>(null);
     const [saving, setSaving] = useState(false);
+    const [configReady, setConfigReady] = useState(false);
     const [error, setError] = useState("");
     const [size, setSize] = useState<CanvasSize>({ width: 0, height: 0 });
     const configRef = useRef(config);
@@ -107,9 +108,24 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
     configRef.current = config;
 
     useEffect(() => {
+        let cancelled = false;
+        setConfigReady(false);
+        setError("");
+        configRef.current = EMPTY_CONFIG;
+        setConfig(EMPTY_CONFIG);
         api.getMapConfig(file.name)
-            .then(setConfig)
-            .catch((e: unknown) => setError(normalizeError(e, "Could not load map configuration")));
+            .then((loaded) => {
+                if (cancelled) return;
+                configRef.current = loaded;
+                setConfig(loaded);
+                setConfigReady(true);
+            })
+            .catch((e: unknown) => {
+                if (!cancelled) setError(normalizeError(e, "Could not load map configuration"));
+            });
+        return () => {
+            cancelled = true;
+        };
     }, [file.name]);
 
     useEffect(() => {
@@ -171,6 +187,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
 
     const enqueueSave = useCallback(
         (update: (current: MapConfig) => MapConfig) => {
+            if (!configReady) return;
             pendingSavesRef.current += 1;
             setSaving(true);
             setError("");
@@ -192,10 +209,11 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                     if (pendingSavesRef.current === 0) setSaving(false);
                 });
         },
-        [file.name, onPinnedChange],
+        [configReady, file.name, onPinnedChange],
     );
 
     const togglePinned = useCallback(async () => {
+        if (!configReady) return;
         setSaving(true);
         setError("");
         try {
@@ -222,11 +240,11 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
         } finally {
             setSaving(false);
         }
-    }, [file.name, onPinnedChange, pinned, t]);
+    }, [configReady, file.name, onPinnedChange, pinned, t]);
 
     const saveZone = useCallback(
         (points: MapPoint[]) => {
-            if (saving || points.length < 3) return;
+            if (saving || !configReady || points.length < 3) return;
             if (!isUsableZone(points)) {
                 setError(t("A room needs at least three distinct corners and must enclose an area."));
                 return;
@@ -250,7 +268,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                 };
             });
         },
-        [enqueueSave, saving, t],
+        [configReady, enqueueSave, saving, t],
     );
 
     const handleMapClick = useCallback(
@@ -274,6 +292,10 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
             }
             if (mode === "no-go" && draft.length === 1) {
                 const start = draft[0];
+                if (!pointsDiffer(start, point)) {
+                    setError(t("The start and end of a no-go line must be different."));
+                    return;
+                }
                 const fallbackName = t("No-go line {number}", { number: configRef.current.noGoLines.length + 1 });
                 const name = window.prompt(t("No-go line name"), fallbackName);
                 const trimmed = name?.trim();
@@ -432,14 +454,14 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
     return (
         <div class="map-editor">
             <div class="map-editor-actions">
-                <button type="button" class="map-editor-btn" disabled={saving} onClick={togglePinned}>
+                <button type="button" class="map-editor-btn" disabled={saving || !configReady} onClick={togglePinned}>
                     {pinned ? <T>Remove reference map</T> : <T>Save as reference map</T>}
                 </button>
                 {pinned && (
                     <button
                         type="button"
                         class="map-editor-btn"
-                        disabled={saving}
+                        disabled={saving || !configReady}
                         onClick={() => setEditing((value) => !value)}
                     >
                         {editing ? <T>Close editor</T> : <T>Edit reference map</T>}
@@ -452,7 +474,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                         <button
                             type="button"
                             class={`map-editor-btn${mode === "zone" ? " active" : ""}`}
-                            disabled={saving}
+                            disabled={saving || !configReady}
                             aria-pressed={mode === "zone"}
                             onClick={() => {
                                 setMode("zone");
@@ -465,7 +487,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                         <button
                             type="button"
                             class={`map-editor-btn${mode === "rectangle" ? " active" : ""}`}
-                            disabled={saving}
+                            disabled={saving || !configReady}
                             aria-pressed={mode === "rectangle"}
                             onClick={() => {
                                 setMode("rectangle");
@@ -478,7 +500,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                         <button
                             type="button"
                             class={`map-editor-btn${mode === "no-go" ? " active" : ""}`}
-                            disabled={saving}
+                            disabled={saving || !configReady}
                             aria-pressed={mode === "no-go"}
                             onClick={() => {
                                 setMode("no-go");
@@ -491,7 +513,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                         <button
                             type="button"
                             class={`map-editor-btn${mode === "move" ? " active" : ""}`}
-                            disabled={saving}
+                            disabled={saving || !configReady}
                             aria-pressed={mode === "move"}
                             onClick={() => {
                                 setMode("move");
@@ -502,12 +524,22 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                             <T>Move rooms</T>
                         </button>
                         {mode === "zone" && draft.length >= 3 && (
-                            <button type="button" class="map-editor-btn primary" disabled={saving} onClick={finishZone}>
+                            <button
+                                type="button"
+                                class="map-editor-btn primary"
+                                disabled={saving || !configReady}
+                                onClick={finishZone}
+                            >
                                 <T>Finish room</T>
                             </button>
                         )}
                         {draft.length > 0 && (
-                            <button type="button" class="map-editor-btn" disabled={saving} onClick={() => setDraft([])}>
+                            <button
+                                type="button"
+                                class="map-editor-btn"
+                                disabled={saving || !configReady}
+                                onClick={() => setDraft([])}
+                            >
                                 <T>Cancel drawing</T>
                             </button>
                         )}
@@ -529,6 +561,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
             {projection && (
                 <svg
                     class={`map-editor-overlay${editing ? "" : " readonly"}`}
+                    data-map-drawing={editing && mode !== "idle" && mode !== "move" ? "true" : undefined}
                     viewBox={`0 0 ${size.width} ${size.height}`}
                     onClick={handleMapClick}
                     onPointerMove={moveZone}
@@ -612,7 +645,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                             <button
                                 type="button"
                                 class="map-editor-chip-name"
-                                disabled={saving}
+                                disabled={saving || !configReady}
                                 onClick={() => renameZone(zone.id)}
                             >
                                 {translateExampleMapName(zone.name, t)}
@@ -621,7 +654,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                                 type="color"
                                 class="map-editor-chip-color"
                                 value={roomColor(zone.color, index)}
-                                disabled={saving}
+                                disabled={saving || !configReady}
                                 onChange={(event) => changeZoneColor(zone.id, event.currentTarget.value.toUpperCase())}
                                 aria-label={t("Choose color for room {name}", {
                                     name: translateExampleMapName(zone.name, t),
@@ -630,7 +663,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                             <button
                                 type="button"
                                 class="map-editor-chip-delete"
-                                disabled={saving}
+                                disabled={saving || !configReady}
                                 onClick={() => removeZone(zone.id)}
                                 aria-label={t("Delete room {name}", { name: translateExampleMapName(zone.name, t) })}
                             >
@@ -646,7 +679,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                                 <button
                                     type="button"
                                     class="map-editor-chip-name"
-                                    disabled={saving}
+                                    disabled={saving || !configReady}
                                     onClick={() => renameLine(line.id, fallbackName)}
                                 >
                                     {displayName}
@@ -654,7 +687,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                                 <button
                                     type="button"
                                     class="map-editor-chip-delete"
-                                    disabled={saving}
+                                    disabled={saving || !configReady}
                                     onClick={() => removeLine(line.id)}
                                     aria-label={t("Delete no-go line {name}", { name: displayName })}
                                 >

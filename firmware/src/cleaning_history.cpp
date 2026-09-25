@@ -1064,14 +1064,20 @@ bool CleaningHistory::deleteSession(const String& filename) {
     String path = String(HISTORY_DIR) + "/" + filename;
     if (!SPIFFS.exists(path))
         return false;
+
+    // Keep cached metadata and map sidecars intact when deleting the primary
+    // session file fails. Otherwise the session remains visible but loses its
+    // associated data and can no longer be retried cleanly.
+    if (!SPIFFS.remove(path))
+        return false;
+
     metaCache.erase(filename);
-    bool removed = SPIFFS.remove(path);
     SPIFFS.remove(sidecarPath(filename, ".pin"));
     SPIFFS.remove(sidecarPath(filename, ".map.json"));
     SPIFFS.remove(sidecarPath(filename, ".map.json.tmp"));
     SPIFFS.remove(sidecarPath(filename, ".map.json.bak"));
     SPIFFS.remove(sidecarPath(filename, ".map.json.old"));
-    return removed;
+    return true;
 }
 
 void CleaningHistory::deleteAllSessions() {
