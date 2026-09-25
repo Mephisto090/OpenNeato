@@ -2402,51 +2402,51 @@ input:disabled {
     touch-action: manipulation;
 }
 
-.history-canvas-wrap.reference-map {
+.history-canvas-wrap:has(.map-editor-actions) {
     margin-bottom: 68px;
     overflow: visible;
 }
 
-.history-canvas-wrap.reference-map:has(.map-editor-toolbar) {
+.history-canvas-wrap:has(.map-editor-toolbar) {
     margin-top: 60px;
 }
 
-.history-canvas-wrap.reference-map .map-editor-toolbar {
+.history-canvas-wrap .map-editor-toolbar {
     top: -52px;
 }
 
-.history-canvas-wrap.reference-map .map-editor-overlay {
+.history-canvas-wrap .map-editor-overlay {
     bottom: 0;
 }
 
-.history-canvas-wrap.reference-map .history-rotate-btn {
+.history-canvas-wrap .history-rotate-btn {
     top: 50%;
 }
 
-.history-canvas-wrap.reference-map .map-editor-actions {
+.history-canvas-wrap .map-editor-actions {
     bottom: -60px;
 }
 
-.history-canvas-wrap.reference-map .map-editor-items {
+.history-canvas-wrap .map-editor-items {
     bottom: 12px;
 }
 
-.history-canvas-wrap.reference-map .map-editor-error {
+.history-canvas-wrap .map-editor-error {
     bottom: 64px;
 }
 
-.history-canvas-wrap.reference-map:has(.map-editor-items) {
+.history-canvas-wrap:has(.map-editor-items) {
     margin-bottom: 116px;
 }
 
-.history-canvas-wrap.reference-map:has(.map-editor-items) .map-editor-items {
+.history-canvas-wrap:has(.map-editor-items) .map-editor-items {
     right: 0;
     bottom: -48px;
     left: 0;
     max-width: none;
 }
 
-.history-canvas-wrap.reference-map:has(.map-editor-items) .map-editor-actions {
+.history-canvas-wrap:has(.map-editor-items) .map-editor-actions {
     bottom: -108px;
 }
 
@@ -3486,22 +3486,22 @@ input:disabled {
         width: calc(100% - 80px);
         gap: 6px;
     }
-    .history-canvas-wrap.reference-map:has(.map-editor-toolbar) {
+    .history-canvas-wrap:has(.map-editor-toolbar) {
         margin-top: 84px;
     }
-    .history-canvas-wrap.reference-map .map-editor-toolbar {
+    .history-canvas-wrap .map-editor-toolbar {
         top: -76px;
         width: 100%;
     }
-    .history-canvas-wrap.reference-map:has(.map-editor-items) {
+    .history-canvas-wrap:has(.map-editor-items) {
         margin-bottom: 128px;
     }
-    .history-canvas-wrap.reference-map:has(.map-editor-items) .map-editor-items {
+    .history-canvas-wrap:has(.map-editor-items) .map-editor-items {
         right: 0;
         bottom: -52px;
         left: 0;
     }
-    .history-canvas-wrap.reference-map:has(.map-editor-items) .map-editor-actions {
+    .history-canvas-wrap:has(.map-editor-items) .map-editor-actions {
         bottom: -120px;
     }
     .map-editor-btn {
