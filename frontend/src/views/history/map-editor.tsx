@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { api } from "../../api";
+import manualSvg from "../../assets/icons/manual.svg?raw";
+import noGoLineSvg from "../../assets/icons/no-go-line.svg?raw";
+import roomFreeformSvg from "../../assets/icons/room-freeform.svg?raw";
+import roomRectangleSvg from "../../assets/icons/room-rectangle.svg?raw";
+import { Icon } from "../../components/icon";
 import { T, useI18n } from "../../i18n";
 import type { HistoryFileInfo, MapConfig, MapData, MapPoint, MapTransform } from "../../types";
 import { normalizeError } from "../../utils";
@@ -454,6 +459,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                                 setDraft([]);
                             }}
                         >
+                            <Icon svg={roomFreeformSvg} class="map-editor-tool-icon" />
                             <T>Freeform room</T>
                         </button>
                         <button
@@ -466,6 +472,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                                 setDraft([]);
                             }}
                         >
+                            <Icon svg={roomRectangleSvg} class="map-editor-tool-icon" />
                             <T>Rectangular room</T>
                         </button>
                         <button
@@ -478,6 +485,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                                 setDraft([]);
                             }}
                         >
+                            <Icon svg={noGoLineSvg} class="map-editor-tool-icon" />
                             <T>Draw no-go line</T>
                         </button>
                         <button
@@ -490,6 +498,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                                 setDraft([]);
                             }}
                         >
+                            <Icon svg={manualSvg} class="map-editor-tool-icon" />
                             <T>Move rooms</T>
                         </button>
                         {mode === "zone" && draft.length >= 3 && (

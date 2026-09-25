@@ -3259,6 +3259,21 @@ input:disabled {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
 }
+.map-editor-toolbar .map-editor-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+.map-editor-tool-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+.map-editor-tool-icon svg {
+    width: 17px;
+    height: 17px;
+}
+
 .map-editor-items {
     right: 12px;
     bottom: 12px;
