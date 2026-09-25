@@ -228,6 +228,11 @@ body {
     pointer-events: none;
 }
 
+.header-right-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
 /* Hero area */
 
 .hero-area {
