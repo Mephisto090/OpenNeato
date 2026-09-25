@@ -2435,6 +2435,21 @@ input:disabled {
     bottom: 64px;
 }
 
+.history-canvas-wrap.reference-map:has(.map-editor-items) {
+    margin-bottom: 116px;
+}
+
+.history-canvas-wrap.reference-map:has(.map-editor-items) .map-editor-items {
+    right: 0;
+    bottom: -48px;
+    left: 0;
+    max-width: none;
+}
+
+.history-canvas-wrap.reference-map:has(.map-editor-items) .map-editor-actions {
+    bottom: -108px;
+}
+
 .history-rotate-btn {
     position: absolute;
     top: 50%;
@@ -3477,6 +3492,17 @@ input:disabled {
     .history-canvas-wrap.reference-map .map-editor-toolbar {
         top: -76px;
         width: 100%;
+    }
+    .history-canvas-wrap.reference-map:has(.map-editor-items) {
+        margin-bottom: 128px;
+    }
+    .history-canvas-wrap.reference-map:has(.map-editor-items) .map-editor-items {
+        right: 0;
+        bottom: -52px;
+        left: 0;
+    }
+    .history-canvas-wrap.reference-map:has(.map-editor-items) .map-editor-actions {
+        bottom: -120px;
     }
     .map-editor-btn {
         min-height: 44px;
