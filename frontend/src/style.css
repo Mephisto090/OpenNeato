@@ -2403,28 +2403,28 @@ input:disabled {
 }
 
 .history-canvas-wrap.reference-map {
-    padding-bottom: 60px;
+    margin-bottom: 68px;
+    overflow: visible;
 }
 
 .history-canvas-wrap.reference-map .map-editor-overlay {
-    bottom: 60px;
-    height: auto;
+    bottom: 0;
 }
 
 .history-canvas-wrap.reference-map .history-rotate-btn {
-    top: calc((100% - 60px) / 2);
+    top: 50%;
 }
 
 .history-canvas-wrap.reference-map .map-editor-actions {
-    bottom: 8px;
+    bottom: -60px;
 }
 
 .history-canvas-wrap.reference-map .map-editor-items {
-    bottom: 72px;
+    bottom: 12px;
 }
 
 .history-canvas-wrap.reference-map .map-editor-error {
-    bottom: 124px;
+    bottom: 64px;
 }
 
 .history-rotate-btn {
