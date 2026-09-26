@@ -31,7 +31,8 @@ WebServer::WebServer(AsyncWebServer& server, NeatoSerial& neato, DataLogger& log
                      FirmwareManager& fw, SettingsManager& settings, ManualCleanManager& manual,
                      NotificationManager& notif, NavigationManager& navigation, CleaningHistory& history,
                      WiFiManager& wifi, Scheduler& scheduler) :
-    server(server), neato(neato), logger(logger), sysMgr(sys), fwMgr(fw), settingsMgr(settings), manualMgr(manual),
+    server(server),
+    neato(neato), logger(logger), sysMgr(sys), fwMgr(fw), settingsMgr(settings), manualMgr(manual),
     navigationMgr(navigation), notifMgr(notif), historyMgr(history), wifiMgr(wifi), scheduler(scheduler) {}
 
 void WebServer::loggedRoute(const char *path, WebRequestMethodComposite httpMethod, SyncHandler handler) {

@@ -35,12 +35,12 @@ namespace {
         return degrees;
     }
 
-    void skipWhitespace(const char *&cursor) {
+    void skipWhitespace(const char *& cursor) {
         while (*cursor && isspace(static_cast<unsigned char>(*cursor)))
             cursor++;
     }
 
-    bool consume(const char *&cursor, char expected) {
+    bool consume(const char *& cursor, char expected) {
         skipWhitespace(cursor);
         if (*cursor != expected)
             return false;
@@ -48,7 +48,7 @@ namespace {
         return true;
     }
 
-    bool parseString(const char *&cursor, String& value) {
+    bool parseString(const char *& cursor, String& value) {
         skipWhitespace(cursor);
         if (*cursor++ != '"')
             return false;
@@ -64,7 +64,7 @@ namespace {
         return true;
     }
 
-    bool parseNumber(const char *&cursor, float& value) {
+    bool parseNumber(const char *& cursor, float& value) {
         skipWhitespace(cursor);
         char *end = nullptr;
         value = strtof(cursor, &end);
@@ -243,11 +243,11 @@ void NavigationManager::finish(State finalState, const String& error) {
     manual.move(0, 0, 0, nullptr);
     auto complete = [this, finalState](bool) {
         state = finalState;
-        logger.logGenericEvent(
-                finalState == State::COMPLETE ? "navigation_complete" :
-                finalState == State::CANCELLED ? "navigation_cancelled" : "navigation_error",
-                errorMessage.isEmpty() ? std::vector<Field>{} :
-                                         std::vector<Field>{{"error", errorMessage, FIELD_STRING}});
+        logger.logGenericEvent(finalState == State::COMPLETE    ? "navigation_complete"
+                               : finalState == State::CANCELLED ? "navigation_cancelled"
+                                                                : "navigation_error",
+                               errorMessage.isEmpty() ? std::vector<Field>{}
+                                                      : std::vector<Field>{{"error", errorMessage, FIELD_STRING}});
     };
     if (manual.isActive()) {
         if (!manual.enable(false, complete))
@@ -258,10 +258,10 @@ void NavigationManager::finish(State finalState, const String& error) {
 }
 
 String NavigationManager::getStatusJson() const {
-    String json = "{\"state\":\"" + String(stateName(state)) + "\",\"waypointIndex\":" +
-                  String(static_cast<unsigned int>(waypointIndex)) + ",\"waypointCount\":" +
-                  String(static_cast<unsigned int>(waypoints.size())) + ",\"hasPosition\":" +
-                  String(hasPosition ? "true" : "false");
+    String json = "{\"state\":\"" + String(stateName(state)) +
+                  "\",\"waypointIndex\":" + String(static_cast<unsigned int>(waypointIndex)) +
+                  ",\"waypointCount\":" + String(static_cast<unsigned int>(waypoints.size())) +
+                  ",\"hasPosition\":" + String(hasPosition ? "true" : "false");
     if (hasPosition) {
         json += ",\"position\":{\"x\":" + String(currentX, 3) + ",\"y\":" + String(currentY, 3) +
                 ",\"theta\":" + String(currentTheta, 1) + "}";
