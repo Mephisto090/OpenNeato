@@ -104,10 +104,16 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
     const [size, setSize] = useState<CanvasSize>({ width: 0, height: 0 });
     const configRef = useRef(config);
     const activeFileRef = useRef(file.name);
+    const previousFileRef = useRef(file.name);
+    const fileGenerationRef = useRef(0);
     const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
     const pendingSavesRef = useRef(0);
     configRef.current = config;
     activeFileRef.current = file.name;
+    if (previousFileRef.current !== file.name) {
+        previousFileRef.current = file.name;
+        fileGenerationRef.current += 1;
+    }
 
     useEffect(() => {
         let cancelled = false;
@@ -194,28 +200,38 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
         (update: (current: MapConfig) => MapConfig) => {
             if (!configReady) return;
             const requestedFile = file.name;
+            const requestedGeneration = fileGenerationRef.current;
             pendingSavesRef.current += 1;
             setSaving(true);
             setError("");
             saveQueueRef.current = saveQueueRef.current
                 .then(async () => {
-                    if (activeFileRef.current !== requestedFile) return;
+                    if (activeFileRef.current !== requestedFile || fileGenerationRef.current !== requestedGeneration)
+                        return;
                     const next = update(configRef.current);
                     try {
                         const saved = await api.saveMapConfig(requestedFile, next);
-                        if (activeFileRef.current !== requestedFile) return;
+                        if (
+                            activeFileRef.current !== requestedFile ||
+                            fileGenerationRef.current !== requestedGeneration
+                        )
+                            return;
                         configRef.current = saved;
                         setConfig(saved);
                         setPinned(true);
                         onPinnedChange?.(true);
                     } catch (e: unknown) {
-                        if (activeFileRef.current === requestedFile) {
+                        if (
+                            activeFileRef.current === requestedFile &&
+                            fileGenerationRef.current === requestedGeneration
+                        ) {
                             setError(normalizeError(e, "Could not save map configuration"));
                         }
                     }
                 })
                 .finally(() => {
-                    if (activeFileRef.current !== requestedFile) return;
+                    if (activeFileRef.current !== requestedFile || fileGenerationRef.current !== requestedGeneration)
+                        return;
                     pendingSavesRef.current -= 1;
                     if (pendingSavesRef.current === 0) setSaving(false);
                 });
@@ -226,6 +242,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
     const togglePinned = useCallback(async () => {
         if (!configReady) return;
         const requestedFile = file.name;
+        const requestedGeneration = fileGenerationRef.current;
         setSaving(true);
         setError("");
         try {
@@ -235,14 +252,16 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                 if (name === null) return;
                 const trimmed = name.trim() || fallbackName;
                 const saved = await api.saveMapConfig(requestedFile, { ...configRef.current, name: trimmed });
-                if (activeFileRef.current !== requestedFile) return;
+                if (activeFileRef.current !== requestedFile || fileGenerationRef.current !== requestedGeneration)
+                    return;
                 configRef.current = saved;
                 setConfig(saved);
                 setPinned(true);
                 onPinnedChange?.(true);
             } else {
                 await api.setHistoryPinned(requestedFile, false);
-                if (activeFileRef.current !== requestedFile) return;
+                if (activeFileRef.current !== requestedFile || fileGenerationRef.current !== requestedGeneration)
+                    return;
                 setPinned(false);
                 onPinnedChange?.(false);
                 setEditing(false);
@@ -250,11 +269,12 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                 setDraft([]);
             }
         } catch (e: unknown) {
-            if (activeFileRef.current === requestedFile) {
+            if (activeFileRef.current === requestedFile && fileGenerationRef.current === requestedGeneration) {
                 setError(normalizeError(e, "Could not update pinned map"));
             }
         } finally {
-            if (activeFileRef.current === requestedFile) setSaving(false);
+            if (activeFileRef.current === requestedFile && fileGenerationRef.current === requestedGeneration)
+                setSaving(false);
         }
     }, [configReady, file.name, onPinnedChange, pinned, t]);
 
