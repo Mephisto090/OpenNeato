@@ -103,14 +103,19 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
     const [error, setError] = useState("");
     const [size, setSize] = useState<CanvasSize>({ width: 0, height: 0 });
     const configRef = useRef(config);
+    const activeFileRef = useRef(file.name);
     const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
     const pendingSavesRef = useRef(0);
     configRef.current = config;
+    activeFileRef.current = file.name;
 
     useEffect(() => {
         let cancelled = false;
         setConfigReady(false);
         setError("");
+        saveQueueRef.current = Promise.resolve();
+        pendingSavesRef.current = 0;
+        setSaving(false);
         configRef.current = EMPTY_CONFIG;
         setConfig(EMPTY_CONFIG);
         api.getMapConfig(file.name)
@@ -188,23 +193,29 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
     const enqueueSave = useCallback(
         (update: (current: MapConfig) => MapConfig) => {
             if (!configReady) return;
+            const requestedFile = file.name;
             pendingSavesRef.current += 1;
             setSaving(true);
             setError("");
             saveQueueRef.current = saveQueueRef.current
                 .then(async () => {
+                    if (activeFileRef.current !== requestedFile) return;
                     const next = update(configRef.current);
                     try {
-                        const saved = await api.saveMapConfig(file.name, next);
+                        const saved = await api.saveMapConfig(requestedFile, next);
+                        if (activeFileRef.current !== requestedFile) return;
                         configRef.current = saved;
                         setConfig(saved);
                         setPinned(true);
                         onPinnedChange?.(true);
                     } catch (e: unknown) {
-                        setError(normalizeError(e, "Could not save map configuration"));
+                        if (activeFileRef.current === requestedFile) {
+                            setError(normalizeError(e, "Could not save map configuration"));
+                        }
                     }
                 })
                 .finally(() => {
+                    if (activeFileRef.current !== requestedFile) return;
                     pendingSavesRef.current -= 1;
                     if (pendingSavesRef.current === 0) setSaving(false);
                 });
@@ -214,6 +225,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
 
     const togglePinned = useCallback(async () => {
         if (!configReady) return;
+        const requestedFile = file.name;
         setSaving(true);
         setError("");
         try {
@@ -222,13 +234,15 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                 const name = window.prompt(t("Reference map name"));
                 if (name === null) return;
                 const trimmed = name.trim() || fallbackName;
-                const saved = await api.saveMapConfig(file.name, { ...configRef.current, name: trimmed });
+                const saved = await api.saveMapConfig(requestedFile, { ...configRef.current, name: trimmed });
+                if (activeFileRef.current !== requestedFile) return;
                 configRef.current = saved;
                 setConfig(saved);
                 setPinned(true);
                 onPinnedChange?.(true);
             } else {
-                await api.setHistoryPinned(file.name, false);
+                await api.setHistoryPinned(requestedFile, false);
+                if (activeFileRef.current !== requestedFile) return;
                 setPinned(false);
                 onPinnedChange?.(false);
                 setEditing(false);
@@ -236,9 +250,11 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                 setDraft([]);
             }
         } catch (e: unknown) {
-            setError(normalizeError(e, "Could not update pinned map"));
+            if (activeFileRef.current === requestedFile) {
+                setError(normalizeError(e, "Could not update pinned map"));
+            }
         } finally {
-            setSaving(false);
+            if (activeFileRef.current === requestedFile) setSaving(false);
         }
     }, [configReady, file.name, onPinnedChange, pinned, t]);
 

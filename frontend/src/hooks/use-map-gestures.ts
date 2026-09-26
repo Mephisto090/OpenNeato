@@ -110,9 +110,12 @@ export function useMapGestures(canvasRef: { current: HTMLCanvasElement | null },
         const gestureTarget = canvas.parentElement ?? canvas;
         const isDrawingTarget = (target: EventTarget | null) =>
             target instanceof Element && target.closest("[data-map-drawing=true]") !== null;
+        const isMapSurface = (target: EventTarget | null) =>
+            target instanceof Element && (target === canvas || target.closest(".map-editor-overlay") !== null);
 
         // --- Wheel zoom ---
         const onWheel = (e: WheelEvent) => {
+            if (!isMapSurface(e.target)) return;
             e.preventDefault();
             const delta = -e.deltaY * WHEEL_ZOOM_SPEED;
             const local = toLocal(e.clientX, e.clientY);
@@ -121,7 +124,7 @@ export function useMapGestures(canvasRef: { current: HTMLCanvasElement | null },
 
         // --- Pointer (mouse only) drag ---
         const onPointerDown = (e: PointerEvent) => {
-            if (e.button !== 0 || isDrawingTarget(e.target)) return;
+            if (e.button !== 0 || !isMapSurface(e.target) || isDrawingTarget(e.target)) return;
             if (e.pointerType === "touch") return;
             dragging.current = true;
             dragStart.current = { x: e.clientX, y: e.clientY };
@@ -142,7 +145,7 @@ export function useMapGestures(canvasRef: { current: HTMLCanvasElement | null },
 
         // --- Double-click: zoom in when at 1x, reset otherwise ---
         const onDoubleClick = (e: MouseEvent) => {
-            if (isDrawingTarget(e.target)) return;
+            if (!isMapSurface(e.target) || isDrawingTarget(e.target)) return;
             e.preventDefault();
             if (tRef.current.zoom <= MIN_ZOOM) {
                 const local = toLocal(e.clientX, e.clientY);
@@ -154,6 +157,7 @@ export function useMapGestures(canvasRef: { current: HTMLCanvasElement | null },
 
         // --- Touch gestures ---
         const onTouchStart = (e: TouchEvent) => {
+            if (!isMapSurface(e.target)) return;
             // A single touch belongs to the active drawing tool; two-finger
             // pinch/zoom remains available while drawing.
             if (e.touches.length === 1 && isDrawingTarget(e.target)) return;
@@ -197,6 +201,7 @@ export function useMapGestures(canvasRef: { current: HTMLCanvasElement | null },
         };
 
         const onTouchMove = (e: TouchEvent) => {
+            if (!isMapSurface(e.target)) return;
             if (e.touches.length === 1 && isDrawingTarget(e.target)) return;
             e.preventDefault();
             if (e.touches.length === 2 && pinching.current) {
