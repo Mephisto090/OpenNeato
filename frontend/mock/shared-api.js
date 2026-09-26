@@ -391,6 +391,7 @@ const extractFirmwarePayload = (bodyBytes) => {
 function createMockApi(context) {
     const rand = context.rand ?? defaultRand;
     const sleep = context.sleep ?? defaultSleep;
+    const now = context.now ?? Date.now;
 
     const getState = () => context.state;
     const getFaults = () => context.faults;
@@ -400,6 +401,24 @@ function createMockApi(context) {
         waypointCount: 0,
         hasPosition: false,
     };
+    let navigationHeartbeatAt = null;
+
+    const expireNavigationHeartbeat = () => {
+        if (
+            navigationState.state !== "navigating" ||
+            navigationHeartbeatAt === null ||
+            now() - navigationHeartbeatAt < 5000
+        )
+            return;
+        navigationState = {
+            ...navigationState,
+            state: "error",
+            error: "navigation client heartbeat timed out",
+        };
+        const state = getState();
+        state.manualClean = false;
+        deriveStates(state);
+    };
 
     const handle = async (request) => {
         const state = getState();
@@ -407,6 +426,8 @@ function createMockApi(context) {
         const method = request.method;
         const path = request.path;
         const query = request.query;
+
+        expireNavigationHeartbeat();
 
         if (state.offline) return { offline: true };
 
@@ -598,6 +619,7 @@ function createMockApi(context) {
                     position: { x: waypoints[0].x, y: waypoints[0].y, theta: waypoints[0].t },
                 };
                 state.manualClean = true;
+                navigationHeartbeatAt = now();
                 deriveStates(state);
                 return jsonResponse(navigationState, 202);
             } catch {
@@ -605,9 +627,13 @@ function createMockApi(context) {
             }
         }
 
-        if (method === "GET" && path === "/api/navigate/status") return jsonResponse(navigationState);
+        if (method === "GET" && path === "/api/navigate/status") {
+            navigationHeartbeatAt = now();
+            return jsonResponse(navigationState);
+        }
 
         if (method === "DELETE" && path === "/api/navigate") {
+            navigationHeartbeatAt = now();
             navigationState = { ...navigationState, state: "cancelled" };
             state.manualClean = false;
             deriveStates(state);

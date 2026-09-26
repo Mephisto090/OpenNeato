@@ -2,6 +2,7 @@
 #define NAVIGATION_MANAGER_H
 
 #include <Arduino.h>
+#include <atomic>
 #include <functional>
 #include <vector>
 #include "loop_task.h"
@@ -22,6 +23,7 @@ public:
 
     bool start(const String& body, String& error);
     void stop();
+    void noteClientActivity();
     String getStatusJson() const;
 
 private:
@@ -41,6 +43,7 @@ private:
     bool movePending = false;
     unsigned long nextPositionPollMs = 0;
     unsigned long stateStartedMs = 0;
+    std::atomic<uint32_t> lastClientActivityMs{0};
     uint32_t generation = 0;
     String errorMessage;
 

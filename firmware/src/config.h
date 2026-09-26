@@ -75,12 +75,18 @@
 #define CACHE_TTL_VERSION 300000 // GetVersion — rarely changes (5 min)
 #define CACHE_TTL_LDS 1500 // LIDAR scan — 1.5s (scan takes ~800ms on serial)
 
+// Experimental physical navigation is opt-in until hardware validation is complete.
+#ifndef ENABLE_EXPERIMENTAL_NAVIGATION
+#define ENABLE_EXPERIMENTAL_NAVIGATION 0
+#endif
+
 // Manual clean safety
 #define MANUAL_SAFETY_POLL_MS 500 // Poll bumpers every 500ms during manual clean
 #define MANUAL_STALL_POLL_MS 500 // Poll wheel load every 500ms while wheels are moving
 #define MANUAL_STALL_LOAD_PCT 60 // Wheel load % threshold — above this is considered stalled
 #define MANUAL_STALL_COUNT 2 // Consecutive overloaded polls before stopping (2 × 500ms = 1s grace)
 #define MANUAL_CLIENT_TIMEOUT_MS 5000 // Stop wheels if no API activity (any request) within this window
+#define NAVIGATION_CLIENT_TIMEOUT_MS 5000 // Stop navigation if its own client heartbeat expires
 #define MANUAL_BRUSH_RPM 1200 // Default brush RPM in manual mode
 #define MANUAL_VACUUM_SPEED_PCT 80 // Default vacuum speed (%) in manual mode
 #define MANUAL_SIDE_BRUSH_POWER_MW 1500 // Default side brush power (mW) — universal Neato Botvac default

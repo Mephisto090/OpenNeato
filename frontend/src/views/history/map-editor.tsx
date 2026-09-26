@@ -106,6 +106,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
     const activeFileRef = useRef(file.name);
     const previousFileRef = useRef(file.name);
     const fileGenerationRef = useRef(0);
+    const mutationGenerationRef = useRef(0);
     const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
     const pendingSavesRef = useRef(0);
     configRef.current = config;
@@ -113,10 +114,16 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
     if (previousFileRef.current !== file.name) {
         previousFileRef.current = file.name;
         fileGenerationRef.current += 1;
+        mutationGenerationRef.current += 1;
     }
 
     useEffect(() => {
         let cancelled = false;
+        setPinned(file.pinned);
+        setEditing(false);
+        setMode("idle");
+        setDraft([]);
+        setDrag(null);
         setConfigReady(false);
         setError("");
         saveQueueRef.current = Promise.resolve();
@@ -201,6 +208,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
             if (!configReady) return;
             const requestedFile = file.name;
             const requestedGeneration = fileGenerationRef.current;
+            const requestedMutation = ++mutationGenerationRef.current;
             pendingSavesRef.current += 1;
             setSaving(true);
             setError("");
@@ -217,13 +225,15 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                         )
                             return;
                         configRef.current = saved;
+                        if (mutationGenerationRef.current !== requestedMutation) return;
                         setConfig(saved);
                         setPinned(true);
                         onPinnedChange?.(true);
                     } catch (e: unknown) {
                         if (
                             activeFileRef.current === requestedFile &&
-                            fileGenerationRef.current === requestedGeneration
+                            fileGenerationRef.current === requestedGeneration &&
+                            mutationGenerationRef.current === requestedMutation
                         ) {
                             setError(normalizeError(e, "Could not save map configuration"));
                         }
@@ -239,43 +249,71 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
         [configReady, file.name, onPinnedChange],
     );
 
-    const togglePinned = useCallback(async () => {
+    const togglePinned = useCallback(() => {
         if (!configReady) return;
         const requestedFile = file.name;
         const requestedGeneration = fileGenerationRef.current;
+        const shouldPin = !pinned;
+        let name = "";
+        if (shouldPin) {
+            const fallbackName = configRef.current.name || t("My reference map");
+            const promptedName = window.prompt(t("Reference map name"));
+            if (promptedName === null) return;
+            name = promptedName.trim() || fallbackName;
+        }
+        const requestedMutation = ++mutationGenerationRef.current;
+        pendingSavesRef.current += 1;
         setSaving(true);
         setError("");
-        try {
-            if (!pinned) {
-                const fallbackName = configRef.current.name || t("My reference map");
-                const name = window.prompt(t("Reference map name"));
-                if (name === null) return;
-                const trimmed = name.trim() || fallbackName;
-                const saved = await api.saveMapConfig(requestedFile, { ...configRef.current, name: trimmed });
+        saveQueueRef.current = saveQueueRef.current
+            .then(async () => {
                 if (activeFileRef.current !== requestedFile || fileGenerationRef.current !== requestedGeneration)
                     return;
-                configRef.current = saved;
-                setConfig(saved);
-                setPinned(true);
-                onPinnedChange?.(true);
-            } else {
-                await api.setHistoryPinned(requestedFile, false);
+                try {
+                    if (shouldPin) {
+                        const saved = await api.saveMapConfig(requestedFile, { ...configRef.current, name });
+                        if (
+                            activeFileRef.current !== requestedFile ||
+                            fileGenerationRef.current !== requestedGeneration
+                        )
+                            return;
+                        configRef.current = saved;
+                        if (mutationGenerationRef.current !== requestedMutation) return;
+                        setConfig(saved);
+                        setPinned(true);
+                        onPinnedChange?.(true);
+                    } else {
+                        await api.setHistoryPinned(requestedFile, false);
+                        if (
+                            activeFileRef.current !== requestedFile ||
+                            fileGenerationRef.current !== requestedGeneration ||
+                            mutationGenerationRef.current !== requestedMutation
+                        )
+                            return;
+                        setPinned(false);
+                        onPinnedChange?.(false);
+                        setEditing(false);
+                        setMode("idle");
+                        setDraft([]);
+                        setDrag(null);
+                    }
+                } catch (e: unknown) {
+                    if (
+                        activeFileRef.current === requestedFile &&
+                        fileGenerationRef.current === requestedGeneration &&
+                        mutationGenerationRef.current === requestedMutation
+                    ) {
+                        setConfig(configRef.current);
+                        setError(normalizeError(e, "Could not update pinned map"));
+                    }
+                }
+            })
+            .finally(() => {
                 if (activeFileRef.current !== requestedFile || fileGenerationRef.current !== requestedGeneration)
                     return;
-                setPinned(false);
-                onPinnedChange?.(false);
-                setEditing(false);
-                setMode("idle");
-                setDraft([]);
-            }
-        } catch (e: unknown) {
-            if (activeFileRef.current === requestedFile && fileGenerationRef.current === requestedGeneration) {
-                setError(normalizeError(e, "Could not update pinned map"));
-            }
-        } finally {
-            if (activeFileRef.current === requestedFile && fileGenerationRef.current === requestedGeneration)
-                setSaving(false);
-        }
+                pendingSavesRef.current -= 1;
+                if (pendingSavesRef.current === 0) setSaving(false);
+            });
     }, [configReady, file.name, onPinnedChange, pinned, t]);
 
     const saveZone = useCallback(
@@ -466,6 +504,45 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
         }));
     }, [drag, enqueueSave]);
 
+    const moveZoneWithKeyboard = useCallback(
+        (event: KeyboardEvent, zoneId: string) => {
+            if (saving || !configReady || mode !== "move") return;
+            const step = event.shiftKey ? 0.25 : 0.05;
+            let dx = 0;
+            let dy = 0;
+            switch (event.key) {
+                case "ArrowLeft":
+                    dx = -step;
+                    break;
+                case "ArrowRight":
+                    dx = step;
+                    break;
+                case "ArrowUp":
+                    dy = step;
+                    break;
+                case "ArrowDown":
+                    dy = -step;
+                    break;
+                default:
+                    return;
+            }
+            event.preventDefault();
+            event.stopPropagation();
+            enqueueSave((latest) => ({
+                ...latest,
+                zones: latest.zones.map((zone) =>
+                    zone.id === zoneId
+                        ? {
+                              ...zone,
+                              points: zone.points.map((point) => ({ x: point.x + dx, y: point.y + dy })),
+                          }
+                        : zone,
+                ),
+            }));
+        },
+        [configReady, enqueueSave, mode, saving],
+    );
+
     const displayConfig = useMemo(() => {
         if (!drag) return config;
         const dx = drag.current.x - drag.start.x;
@@ -593,7 +670,11 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                     </p>
                 </>
             )}
-            {error && <div class="map-editor-error">{error}</div>}
+            {error && (
+                <div class="map-editor-error" role="alert" aria-live="assertive">
+                    {error}
+                </div>
+            )}
             {projection && (
                 <svg
                     class={`map-editor-overlay${editing ? "" : " readonly"}`}
@@ -619,6 +700,14 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                                     class={`map-zone-shape${mode === "move" ? " movable" : ""}`}
                                     style={{ fill: color, stroke: color }}
                                     onPointerDown={(event) => startZoneDrag(event, zone.id)}
+                                    tabIndex={editing && mode === "move" ? 0 : undefined}
+                                    role={editing && mode === "move" ? "group" : undefined}
+                                    aria-label={
+                                        editing && mode === "move"
+                                            ? t("Move rooms") + ": " + displayName + " (← ↑ → ↓)"
+                                            : undefined
+                                    }
+                                    onKeyDown={(event) => moveZoneWithKeyboard(event, zone.id)}
                                 />
                                 <g class="map-zone-label" transform={`translate(${center.x} ${center.y})`}>
                                     <rect x={-labelWidth / 2} y={-14} width={labelWidth} height={28} rx="14" />
@@ -677,7 +766,11 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                     }}
                 >
                     {config.zones.map((zone, index) => (
-                        <span class="map-editor-chip zone" style={{ borderColor: roomColor(zone.color, index) }}>
+                        <span
+                            key={zone.id}
+                            class="map-editor-chip zone"
+                            style={{ borderColor: roomColor(zone.color, index) }}
+                        >
                             <button
                                 type="button"
                                 class="map-editor-chip-name"
@@ -711,7 +804,7 @@ export function MapEditor({ canvas, file, map, transform, rotation, onPinnedChan
                         const fallbackName = t("No-go line {number}", { number: index + 1 });
                         const displayName = translateExampleMapName(line.name ?? fallbackName, t);
                         return (
-                            <span class="map-editor-chip no-go">
+                            <span key={line.id} class="map-editor-chip no-go">
                                 <button
                                     type="button"
                                     class="map-editor-chip-name"

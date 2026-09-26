@@ -68,6 +68,8 @@ bool CleaningHistory::setPinned(const String& filename, bool pinned) {
         return false;
     bool ok = marker.print("1") == 1;
     marker.close();
+    if (!ok)
+        SPIFFS.remove(path);
     return ok;
 }
 

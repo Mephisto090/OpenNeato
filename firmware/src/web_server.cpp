@@ -212,6 +212,11 @@ void WebServer::registerManualRoutes() {
 
 void WebServer::registerNavigationRoutes() {
     loggedBodyRoute("/api/navigate", HTTP_POST, [this](AsyncWebServerRequest *request, const String& body) -> int {
+#if !ENABLE_EXPERIMENTAL_NAVIGATION
+        (void) body;
+        sendError(request, 403, "experimental navigation is disabled in this build");
+        return 403;
+#else
         String error;
         if (!navigationMgr.start(body, error)) {
             int status = error.indexOf("active") >= 0 || error.indexOf("unavailable") >= 0 ? 409 : 400;
@@ -220,9 +225,15 @@ void WebServer::registerNavigationRoutes() {
         }
         request->send(202, "application/json", navigationMgr.getStatusJson());
         return 202;
+#endif
     });
-    registerGetRoute("/api/navigate/status", navigationMgr, &NavigationManager::getStatusJson);
+    loggedRoute("/api/navigate/status", HTTP_GET, [this](AsyncWebServerRequest *request) -> int {
+        navigationMgr.noteClientActivity();
+        request->send(200, "application/json", navigationMgr.getStatusJson());
+        return 200;
+    });
     loggedRoute("/api/navigate", HTTP_DELETE, [this](AsyncWebServerRequest *request) -> int {
+        navigationMgr.noteClientActivity();
         navigationMgr.stop();
         request->send(202, "application/json", navigationMgr.getStatusJson());
         return 202;

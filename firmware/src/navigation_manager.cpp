@@ -102,13 +102,14 @@ bool NavigationManager::start(const String& body, String& error) {
     errorMessage = "";
     state = State::ENABLING;
     stateStartedMs = millis();
+    lastClientActivityMs.store(stateStartedMs, std::memory_order_relaxed);
     const uint32_t session = ++generation;
     logger.logGenericEvent("navigation_start", {{"waypoints", String(waypoints.size()), FIELD_INT}});
 
-    if (!manual.enable(true, [this, session](bool ok) {
+    if (!manual.enableNavigation(true, [this, session](bool ok) {
             if (session != generation || state != State::ENABLING) {
                 if (ok)
-                    manual.enable(false, nullptr);
+                    manual.enableNavigation(false, nullptr);
                 return;
             }
             if (!ok) {
@@ -132,6 +133,10 @@ void NavigationManager::stop() {
     finish(State::CANCELLED);
 }
 
+void NavigationManager::noteClientActivity() {
+    lastClientActivityMs.store(millis(), std::memory_order_relaxed);
+}
+
 void NavigationManager::tick() {
     if (state == State::ENABLING && millis() - stateStartedMs >= ENABLE_TIMEOUT_MS) {
         finish(State::ERROR, "manual mode enable timed out");
@@ -139,6 +144,11 @@ void NavigationManager::tick() {
     }
     if (state != State::NAVIGATING)
         return;
+    const uint32_t lastClientActivity = lastClientActivityMs.load(std::memory_order_relaxed);
+    if (millis() - lastClientActivity >= NAVIGATION_CLIENT_TIMEOUT_MS) {
+        finish(State::ERROR, "navigation client heartbeat timed out");
+        return;
+    }
     if (manual.isWatchdogStopped()) {
         finish(State::ERROR, "client watchdog stopped navigation");
         return;
@@ -222,7 +232,7 @@ void NavigationManager::advanceFromPosition(float x, float y, float theta) {
     nextPositionPollMs = millis() + movementMs + MOVE_SETTLE_MARGIN_MS;
     movePending = true;
     const uint32_t session = generation;
-    if (!manual.move(leftMM, rightMM, speed, [this, session](bool ok) {
+    if (!manual.moveNavigation(leftMM, rightMM, speed, [this, session](bool ok) {
             if (session != generation)
                 return;
             movePending = false;
@@ -240,17 +250,19 @@ void NavigationManager::finish(State finalState, const String& error) {
     errorMessage = error;
     positionPending = false;
     movePending = false;
-    manual.move(0, 0, 0, nullptr);
-    auto complete = [this, finalState](bool) {
-        state = finalState;
-        logger.logGenericEvent(finalState == State::COMPLETE    ? "navigation_complete"
-                               : finalState == State::CANCELLED ? "navigation_cancelled"
-                                                                : "navigation_error",
+    auto complete = [this, finalState](bool teardownOk) {
+        State completedState = teardownOk ? finalState : State::ERROR;
+        if (!teardownOk && errorMessage.isEmpty())
+            errorMessage = "navigation emergency teardown failed";
+        state = completedState;
+        logger.logGenericEvent(completedState == State::COMPLETE    ? "navigation_complete"
+                               : completedState == State::CANCELLED ? "navigation_cancelled"
+                                                                    : "navigation_error",
                                errorMessage.isEmpty() ? std::vector<Field>{}
                                                       : std::vector<Field>{{"error", errorMessage, FIELD_STRING}});
     };
-    if (manual.isActive()) {
-        if (!manual.enable(false, complete))
+    if (manual.isNavigationOwner()) {
+        if (!manual.enableNavigation(false, complete))
             complete(false);
     } else {
         complete(true);

@@ -60,11 +60,7 @@ function SessionCard({
                                     ? translateExampleMapName(displayReferenceMapName(referenceName), t)
                                     : t("Reference Map")
                                 : t(info.label)}
-                            {pinned && !referenceCard && (
-                                <span class="history-map-badge">
-                                    <T>Reference map</T>
-                                </span>
-                            )}
+                            {pinned && !referenceCard && <span class="history-map-badge">{t("reference map")}</span>}
                             {active && (
                                 <span class="history-running-badge">
                                     <T>Running</T>

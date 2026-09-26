@@ -530,7 +530,7 @@ paths:
       tags:
         - Navigation
       summary: Start experimental waypoint navigation
-      description: Enters TestMode and follows the supplied robot-coordinate waypoints without cleaning motors.
+      description: Enters TestMode and follows the supplied robot-coordinate waypoints without cleaning motors. Disabled unless the firmware is built with ENABLE_EXPERIMENTAL_NAVIGATION=1.
       requestBody:
         required: true
         content:
@@ -556,6 +556,12 @@ paths:
                 $ref: "#/components/schemas/Error"
         "409":
           description: Navigation or manual mode already active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Experimental navigation is disabled in this firmware build
           content:
             application/json:
               schema:

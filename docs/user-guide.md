@@ -654,11 +654,13 @@ set up on most routers or a Raspberry Pi.
 
 The firmware includes a hardware-validation API for guided waypoint movement. This is an
 experimental proof of concept: it does **not** yet turn saved rooms or no-go lines into a
-cleaning route, it does not run the cleaning motors, and it does not return to the dock.
+cleaning route, it does not run the cleaning motors, and it does not return to the dock. Physical
+navigation is disabled in normal firmware builds. Build and flash the explicit opt-in target with
+`pio run -e c3-navigation-test -t upload` before a supervised hardware test.
 
 > [!CAUTION]
 > Test only on a clear floor while staying close enough to remove power immediately. Keep
-> polling the status endpoint at least once every five seconds. If the client stops sending
+> polling the status endpoint every two seconds (always more often than every five seconds). If the client stops sending
 > requests, the safety watchdog stops the wheels and ends navigation. Bumpers, wheel-lift,
 > and wheel-stall detection remain active.
 
@@ -673,7 +675,14 @@ $waypoints = @(
 ) | ConvertTo-Json
 
 Invoke-RestMethod -Method Post -Uri "$robot/api/navigate" -ContentType "application/json" -Body $waypoints
-Invoke-RestMethod -Method Get -Uri "$robot/api/navigate/status"
+
+do {
+  Start-Sleep -Seconds 2
+  $status = Invoke-RestMethod -Method Get -Uri "$robot/api/navigate/status"
+  $status
+} while ($status.state -in @("enabling", "navigating", "stopping"))
+
+# Run this at any time from another terminal to cancel:
 Invoke-RestMethod -Method Delete -Uri "$robot/api/navigate"
 ```
 
