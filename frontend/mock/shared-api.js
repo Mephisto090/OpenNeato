@@ -394,6 +394,12 @@ function createMockApi(context) {
 
     const getState = () => context.state;
     const getFaults = () => context.faults;
+    let navigationState = {
+        state: "idle",
+        waypointIndex: 0,
+        waypointCount: 0,
+        hasPosition: false,
+    };
 
     const handle = async (request) => {
         const state = getState();
@@ -553,6 +559,59 @@ function createMockApi(context) {
             }
             deriveStates(state);
             return okResponse();
+        }
+
+        if (method === "POST" && path === "/api/navigate") {
+            if (faults.actions) return errorResponse("UART timeout: robot not responding", 500);
+            if (state.manualClean || navigationState.state === "navigating")
+                return errorResponse("navigation or manual mode already active", 409);
+            try {
+                const waypoints = JSON.parse(await request.text());
+                let valid =
+                    Array.isArray(waypoints) &&
+                    waypoints.length > 0 &&
+                    waypoints.length <= 64 &&
+                    waypoints.every(
+                        (point) =>
+                            hasExactKeys(point, ["t", "x", "y"]) &&
+                            Number.isFinite(point.x) &&
+                            Number.isFinite(point.y) &&
+                            Number.isFinite(point.t) &&
+                            Math.abs(point.x) <= 50 &&
+                            Math.abs(point.y) <= 50 &&
+                            Math.abs(point.t) <= 360,
+                    );
+                let routeDistance = 0;
+                for (let index = 1; valid && index < waypoints.length; index++) {
+                    const dx = waypoints[index].x - waypoints[index - 1].x;
+                    const dy = waypoints[index].y - waypoints[index - 1].y;
+                    const segmentDistance = Math.hypot(dx, dy);
+                    routeDistance += segmentDistance;
+                    if (segmentDistance > 15 || routeDistance > 100) valid = false;
+                }
+                if (!valid) return errorResponse("invalid or unsupported waypoint route", 400);
+                navigationState = {
+                    state: "navigating",
+                    waypointIndex: 0,
+                    waypointCount: waypoints.length,
+                    hasPosition: true,
+                    position: { x: waypoints[0].x, y: waypoints[0].y, theta: waypoints[0].t },
+                };
+                state.manualClean = true;
+                deriveStates(state);
+                return jsonResponse(navigationState, 202);
+            } catch {
+                return errorResponse("invalid JSON", 400);
+            }
+        }
+
+        if (method === "GET" && path === "/api/navigate/status") return jsonResponse(navigationState);
+
+        if (method === "DELETE" && path === "/api/navigate") {
+            navigationState = { ...navigationState, state: "cancelled" };
+            state.manualClean = false;
+            deriveStates(state);
+            return jsonResponse(navigationState, 202);
         }
 
         if (method === "GET" && path === "/api/manual/status") {

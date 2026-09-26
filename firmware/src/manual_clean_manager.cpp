@@ -109,6 +109,15 @@ bool ManualCleanManager::move(int leftMM, int rightMM, int speedMMs, std::functi
     if (!active)
         return false;
 
+    // Enforce the timeout at the command boundary too: a serial callback can run
+    // just before tick() gets a chance to latch the watchdog.
+    unsigned long lastActivity = WebServer::lastApiActivity;
+    bool clientTimedOut = lastActivity > 0 && millis() - lastActivity >= MANUAL_CLIENT_TIMEOUT_MS;
+    if ((watchdogStopped || clientTimedOut) && (leftMM != 0 || rightMM != 0)) {
+        watchdogStopped = true;
+        return false;
+    }
+
     // Zero move = explicit stop, always allowed (priority so it jumps the queue)
     if (leftMM == 0 && rightMM == 0) {
         wheelsMoving = false;

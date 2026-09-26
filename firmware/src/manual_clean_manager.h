@@ -50,6 +50,7 @@ public:
     bool setMotors(bool brush, bool vacuum, bool sideBrush, std::function<void(bool)> callback);
 
     bool isActive() const { return active; }
+    bool isWatchdogStopped() const { return watchdogStopped; }
 
     // Update motor/safety settings from SettingsManager. Called at boot and on change.
     void setStallThreshold(int pct) { stallLoadPct = pct; }

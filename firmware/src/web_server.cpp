@@ -6,6 +6,7 @@
 #include "settings_manager.h"
 #include "firmware_manager.h"
 #include "manual_clean_manager.h"
+#include "navigation_manager.h"
 #include "notification_manager.h"
 #include "cleaning_history.h"
 #include "map_config_parser.h"
@@ -28,9 +29,10 @@ namespace {
 
 WebServer::WebServer(AsyncWebServer& server, NeatoSerial& neato, DataLogger& logger, SystemManager& sys,
                      FirmwareManager& fw, SettingsManager& settings, ManualCleanManager& manual,
-                     NotificationManager& notif, CleaningHistory& history, WiFiManager& wifi, Scheduler& scheduler) :
+                     NotificationManager& notif, NavigationManager& navigation, CleaningHistory& history,
+                     WiFiManager& wifi, Scheduler& scheduler) :
     server(server), neato(neato), logger(logger), sysMgr(sys), fwMgr(fw), settingsMgr(settings), manualMgr(manual),
-    notifMgr(notif), historyMgr(history), wifiMgr(wifi), scheduler(scheduler) {}
+    navigationMgr(navigation), notifMgr(notif), historyMgr(history), wifiMgr(wifi), scheduler(scheduler) {}
 
 void WebServer::loggedRoute(const char *path, WebRequestMethodComposite httpMethod, SyncHandler handler) {
     server.on(path, httpMethod, [this, handler](AsyncWebServerRequest *request) {
@@ -113,6 +115,7 @@ void WebServer::begin() {
 
     registerApiRoutes();
     registerManualRoutes();
+    registerNavigationRoutes();
     registerLogRoutes();
     registerSystemRoutes();
     registerSettingsRoutes();
@@ -203,6 +206,29 @@ void WebServer::registerManualRoutes() {
     registerPostRoute("/api/manual", manualMgr, &ManualCleanManager::enable, {"enable"});
 
     LOG("WEB", "Manual clean routes registered");
+}
+
+// -- Guided navigation proof of concept --------------------------------------
+
+void WebServer::registerNavigationRoutes() {
+    loggedBodyRoute("/api/navigate", HTTP_POST, [this](AsyncWebServerRequest *request, const String& body) -> int {
+        String error;
+        if (!navigationMgr.start(body, error)) {
+            int status = error.indexOf("active") >= 0 || error.indexOf("unavailable") >= 0 ? 409 : 400;
+            sendError(request, status, error);
+            return status;
+        }
+        request->send(202, "application/json", navigationMgr.getStatusJson());
+        return 202;
+    });
+    registerGetRoute("/api/navigate/status", navigationMgr, &NavigationManager::getStatusJson);
+    loggedRoute("/api/navigate", HTTP_DELETE, [this](AsyncWebServerRequest *request) -> int {
+        navigationMgr.stop();
+        request->send(202, "application/json", navigationMgr.getStatusJson());
+        return 202;
+    });
+
+    LOG("WEB", "Navigation proof-of-concept routes registered");
 }
 
 // -- Log file endpoints ------------------------------------------------------
